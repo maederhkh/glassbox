@@ -1,0 +1,27 @@
+# Environment
+.env
+.venv/
+venv/
+.python-version
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Experiment outputs (large, regenerable)
+output/
+runs/
+*.jsonl.gz
+
+# Local caches
+.uv-cache/
+.uv-python/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
