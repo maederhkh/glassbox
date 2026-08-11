@@ -20,9 +20,19 @@ def main() -> None:
     p.add_argument("--questions", default="dev_20")
     p.add_argument("--effort", default=EFFORT_BASELINE)
     p.add_argument("--tag", default="", help="suffix for the output directory")
+    p.add_argument(
+        "--only",
+        help="run a single question id from the sample, writing into the same "
+             "run directory as a full run. For backfilling one result (e.g. "
+             "after a manifest replacement) without re-running the rest.",
+    )
     a = p.parse_args()
 
     questions = load_sample(a.questions)
+    if a.only:
+        questions = [q for q in questions if q.id == a.only]
+        if not questions:
+            raise SystemExit(f"{a.only!r} not found in sample {a.questions!r}")
     client = LLMClient(model=SYSTEM_MODEL, temperature=SYSTEM_TEMPERATURE,
                        reasoning_effort=a.effort)
     run_dir = RUNS_DIR / f"{a.questions}__{a.recipe}{a.tag}"
