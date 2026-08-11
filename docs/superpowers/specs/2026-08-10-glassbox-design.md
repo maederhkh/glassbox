@@ -125,9 +125,24 @@ redistributes LEXam's content.
 |---|---|
 | Provider | OpenRouter, for both the system model and all three judges |
 | Model | GPT-5-mini (LEXam open-question score 60.3) |
-| Temperature | ~0.7 for all recipes and stages |
+| Temperature | **Not settable.** See below. |
 | Reasoning effort | Held constant across Plain / Structured / Pipeline; raised only in Think-longer |
-| Seeds | Fixed and recorded where the API supports them |
+| Seeds | Supported by the model, but deliberately left unset — see below |
+
+**Temperature cannot be controlled on this model.** Confirmed 2026-08-10 against
+OpenRouter's model metadata: `temperature` is absent from `supported_parameters` on all
+four upstream routes for `openai/gpt-5-mini`, and `default_parameters.temperature` is
+`null`. A call passing `temperature` does **not** error — the parameter is silently
+dropped. The client therefore omits it.
+
+Two consequences for the study, both of which must be stated rather than glossed:
+
+- Repeated-run variation (§8.1) comes from the model's **own default sampling**, not from
+  a temperature we chose. The measurement is still valid — it observes how stable the
+  system is in the configuration anyone would actually deploy — but the claim is "variation
+  under default sampling", not "variation at temperature 0.7".
+- `seed` **is** supported, and is deliberately left unset. Fixing it would make repeated
+  runs identical and drive the reliability measure to zero by construction.
 
 **Why mid-tier.** Top models score ~70 under LEXam's current grading, so a top-tier model
 leaves little headroom; a null result would be uninterpretable — indistinguishable from
@@ -308,8 +323,10 @@ Effort estimate: roughly half a day.
 
 ### 8.1 Two kinds of instability
 
-- **Sampling instability** — same prompt, 3 runs, temperature ~0.7. The **mean is the
-  headline score** (less noisy than a single run); the spread is the stability measure.
+- **Sampling instability** — same prompt, 3 runs, under the model's default sampling
+  (temperature is not settable on GPT-5-mini; see §4, and `seed` is left unset so runs can
+  differ). The **mean is the headline score** (less noisy than a single run); the spread is
+  the stability measure.
 - **Prompt-wording sensitivity** — 2 reworded prompts of identical meaning. For the
   pipeline all four stage prompts are reworded together, so the manipulation is comparable.
 
@@ -480,6 +497,8 @@ its own mistakes, broken down by the kind of mistake.
 - Possible training-data contamination is unknown.
 - Judge-versus-human agreement rests on 20 hand-scored answers.
 - Recipe 3's compute matching is approximate, not exact.
+- Temperature is not settable on the system model, so repeated-run variation reflects the
+  model's default sampling rather than a chosen setting.
 - The four stages mirror IRAC and the German *Gutachtenstil*; results may not transfer to
   legal traditions structured differently.
 

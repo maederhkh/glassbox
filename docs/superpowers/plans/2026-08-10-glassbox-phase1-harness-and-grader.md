@@ -11,7 +11,8 @@
 ## Global Constraints
 
 - **All model access goes through OpenRouter**, using the OpenAI SDK with `base_url="https://openrouter.ai/api/v1"` and `OPENROUTER_API_KEY`. Model ids are namespaced (`openai/gpt-5-mini`, not `gpt-5-mini`). Nothing talks to `api.openai.com`.
-- Primary system model: **`openai/gpt-5-mini`**. Temperature **0.7**. Same model for every recipe and every stage.
+- Primary system model: **`openai/gpt-5-mini`**, the same model for every recipe and every stage.
+- **Temperature is not supported by this model.** Task 1 established it: `temperature` is absent from `supported_parameters` on all four upstream routes and `default_parameters.temperature` is `null`. The call does not error — the parameter is silently dropped. The client must therefore **not send it**, and `SYSTEM_TEMPERATURE` is `None`. Sampling variation across repeated runs comes from the model's own default sampling; that is what the reliability measurement observes, and it must be described that way rather than as a chosen temperature. `seed` **is** supported and must be left unset, or repeated runs would be identical and the reliability measure would read zero by construction.
 - Judges: LEXam's full three-judge ensemble — **`openai/gpt-4o`, `deepseek/deepseek-chat`, `qwen/qwen3-32b`** — scored as the **minimum** of the three, matching their September 2025 protocol. Model slugs are unverified guesses until Task 1's probe confirms them; a wrong slug must surface in Task 1, not in Task 6.
 - LEXam judge scale is **0.0–1.0 in 0.1 increments**, emitted as `[[0.7]]`, parsed with `r"\[\[(\d\.\d)\]\]"`, clamped to `[0, 1]`, `None` if unparseable.
 - Question set for all Phase 1 work: **`data/dev_20.json`** (dev split). The `test` split is never touched in Phase 1.
@@ -346,16 +347,27 @@ RUNS_DIR = OUTPUT_DIR / "runs"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 SYSTEM_MODEL = "openai/gpt-5-mini"
-SYSTEM_TEMPERATURE = 0.7
+
+# None, not 0.7. Task 1 established that gpt-5-mini does not support temperature:
+# it is absent from supported_parameters on every upstream route, and the call
+# does not error - the parameter is silently dropped. Sending it would create the
+# false impression that sampling is under our control. LLMClient omits the
+# parameter entirely when this is None.
+SYSTEM_TEMPERATURE = None
 
 # Recipe 3 raises this. Confirm the accepted values against docs/api-surface.md
 # before relying on them.
 EFFORT_BASELINE = "low"
 EFFORT_RAISED = "high"
 
-# LEXam's September 2025 protocol: the minimum of three judges. Correct any slug
-# the Task 1 probe reported as unresolvable.
+# LEXam's September 2025 protocol: the minimum of three judges. Task 1 confirmed
+# all three slugs resolve.
 JUDGE_MODELS = ("openai/gpt-4o", "deepseek/deepseek-chat", "qwen/qwen3-32b")
+
+# LEXam grades at temperature 0. Unlike gpt-5-mini these are not reasoning models
+# and should honour it - but Task 5 must confirm each judge lists `temperature` in
+# its supported_parameters, using the same free metadata endpoint Task 1 used. A
+# judge silently sampling at its default would add noise to every score.
 JUDGE_TEMPERATURE = 0.0
 
 # USD per million tokens. VERIFY against current OpenRouter pricing before trusting
