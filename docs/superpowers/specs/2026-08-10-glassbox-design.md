@@ -145,8 +145,11 @@ both serve hypothesis H3:
 ### Sample validation, dev split, 2026-08-10
 
 Every reference answer was scored against itself through all three judges before any system
-was graded. Mean 0.845, and **zero unparseable scores across all 60 calls** — the `[[d.d]]`
-regex boundary is a real but so far theoretical risk with these three judges.
+was graded. Mean **0.845** on the original sample, **0.89** after the one replacement below,
+and **zero unparseable scores across all 60 calls** — the `[[d.d]]` regex boundary is a real
+but so far theoretical risk with these three judges. Per-question figures are recorded in
+`.superpowers/sdd/.../task-6-report.md`; the validation run is not yet persisted to a
+machine-readable artefact, which is a known gap.
 
 Four questions scored below 0.80. Each was read in full and classified:
 
@@ -160,6 +163,34 @@ Four questions scored below 0.80. Each was read in full and classified:
 **One replacement**, drawn from the pre-recorded reserve list in order:
 `0f6dd9e7` → `7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50`. This shifts the area mix from
 Public 11 / Private 7 / Criminal 2 to Public 10 / Private 8 / Criminal 2.
+
+### The holistic judge saturates — measured, 2026-08-10
+
+Recipe 1 (plain single-pass, GPT-5-mini) scored **0.850** across the 20 dev questions: median
+0.90, range 0.60–0.90, distribution {0.6: 1, 0.8: 7, 0.9: 12}. Nothing reached 1.0.
+
+Two observations, both consequential:
+
+- **0.850 is far above LEXam's published 60.3 for this model, and above the 70.2 top score on
+  their whole leaderboard.** Part of that gap is expected: their figure covers a test set that
+  is ~83% German, models score better on English, and their prompt instructs Swiss law and
+  German-style citation, which fits English international-law questions poorly. The size of
+  the gap is nonetheless worth stating rather than explaining away.
+- **On the same 20 questions, the expert reference answers self-score 0.89 and Recipe 1 scores
+  0.85.** A four-point gap, against an observed judge maximum of 0.9. The holistic score
+  therefore has very little power to separate a competent model answer from an examiner's own
+  answer, and correspondingly little power to separate two recipes from each other.
+
+*(An earlier draft of this section compared 0.850 against 0.845 and called them "essentially
+identical". That compared across two different samples — 0.845 is the pre-replacement
+self-score mean. The same-sample comparison is 0.85 against 0.89. The saturation conclusion
+holds, more weakly.)*
+
+**Consequence for the study.** The point-level checklist (§7.2), already designated the
+primary diagnostic metric, is now load-bearing rather than supplementary: the holistic LEXam
+score is retained for comparability with published work but cannot be expected to carry a
+result. If checklist coverage also proves saturated, the ceiling is genuine and the model tier
+or the question difficulty must change before the pipeline is built.
 
 **The minimum-score rule makes the ensemble a lower bound, not a consensus.** In every case
 where the three judges disagreed, the ensemble equalled the harshest of them, and that was
