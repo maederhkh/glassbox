@@ -17,7 +17,14 @@ import statistics
 
 from glassbox.config import JUDGE_MODELS, JUDGE_TEMPERATURE
 from glassbox.dataset import load_sample
-from glassbox.grading.lexam_judge import judge_answer
+# unparseable_counts is imported (not redefined) so tests and callers that
+# import it from this module keep working. Its canonical home is
+# glassbox.grading.lexam_judge -- scripts/grade_runs.py needs it too, and
+# `from scripts.calibrate import ...` only resolves when the repo root
+# happens to be on sys.path (true under pytest's configured pythonpath,
+# false when a script is run directly as `python scripts/grade_runs.py`,
+# which puts scripts/ itself on sys.path instead of the repo root).
+from glassbox.grading.lexam_judge import judge_answer, unparseable_counts
 from glassbox.llm import LLMClient
 
 EMPTY_ANSWER = "I am not able to answer this question."
@@ -66,19 +73,6 @@ def run_reference_check_detailed(questions, clients) -> list[dict]:
             "per_judge": verdict.per_judge,
         })
     return rows
-
-
-def unparseable_counts(rows: list[dict], judge_names: list[str]) -> dict[str, int]:
-    """How many times each judge (by position in `judge_names`) returned a
-    score `SCORE_PATTERN` could not parse, across `rows` from
-    `run_reference_check_detailed`. A None here means that judge's vote was
-    silently dropped from `ensemble_min` for that question."""
-    counts = {name: 0 for name in judge_names}
-    for row in rows:
-        for name, score in zip(judge_names, row["per_judge"]):
-            if score is None:
-                counts[name] += 1
-    return counts
 
 
 def main() -> None:

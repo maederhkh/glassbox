@@ -1,8 +1,7 @@
 from glassbox.llm import FakeLLMClient
 
 from scripts.calibrate import (
-    check_empty_scores_low, check_reference_scores_high,
-    run_reference_check_detailed, unparseable_counts,
+    check_empty_scores_low, check_reference_scores_high, run_reference_check_detailed,
 )
 
 
@@ -55,16 +54,3 @@ def test_detailed_check_preserves_none_for_an_unparseable_judge():
     rows = run_reference_check_detailed(QUESTIONS[:1], clients)
     assert rows[0]["per_judge"] == [None]
     assert rows[0]["score"] is None
-
-
-def test_unparseable_counts_tallies_none_per_judge_by_position():
-    rows = [
-        {"question_id": "q1", "score": 0.4, "per_judge": [0.9, None]},
-        {"question_id": "q2", "score": None, "per_judge": [None, None]},
-    ]
-    assert unparseable_counts(rows, ["judge-a", "judge-b"]) == {"judge-a": 1, "judge-b": 2}
-
-
-def test_unparseable_counts_is_zero_when_every_judge_parses():
-    rows = [{"question_id": "q1", "score": 0.5, "per_judge": [0.5, 0.5]}]
-    assert unparseable_counts(rows, ["judge-a", "judge-b"]) == {"judge-a": 0, "judge-b": 0}

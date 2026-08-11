@@ -1,5 +1,5 @@
 from glassbox.grading.lexam_judge import (
-    JudgeVerdict, ensemble_min, judge_answer, judge_once, parse_score,
+    JudgeVerdict, ensemble_min, judge_answer, judge_once, parse_score, unparseable_counts,
 )
 from glassbox.llm import FakeLLMClient
 
@@ -52,6 +52,19 @@ def test_judge_answer_across_multiple_judges_takes_the_minimum():
     assert isinstance(verdict, JudgeVerdict)
     assert verdict.score == 0.4
     assert verdict.per_judge == [0.9, 0.4]
+
+
+def test_unparseable_counts_tallies_none_per_judge_by_position():
+    rows = [
+        {"question_id": "q1", "score": 0.4, "per_judge": [0.9, None]},
+        {"question_id": "q2", "score": None, "per_judge": [None, None]},
+    ]
+    assert unparseable_counts(rows, ["judge-a", "judge-b"]) == {"judge-a": 1, "judge-b": 2}
+
+
+def test_unparseable_counts_is_zero_when_every_judge_parses():
+    rows = [{"question_id": "q1", "score": 0.5, "per_judge": [0.5, 0.5]}]
+    assert unparseable_counts(rows, ["judge-a", "judge-b"]) == {"judge-a": 0, "judge-b": 0}
 
 
 # --- Deliberate contract boundary, not a bug --------------------------------

@@ -79,3 +79,22 @@ def judge_answer(clients: list, question: str, reference: str, candidate: str) -
     return JudgeVerdict(
         score=ensemble_min(per_judge), per_judge=per_judge, explanations=explanations
     )
+
+
+def unparseable_counts(rows: list[dict], judge_names: list[str]) -> dict[str, int]:
+    """How many times each judge (by position in ``judge_names``) returned a
+    score ``SCORE_PATTERN`` could not parse, across ``rows`` -- any sequence of
+    dicts each carrying a ``"per_judge"`` list in the same judge order, such as
+    the rows written by ``scripts/calibrate.py`` or ``scripts/grade_runs.py``.
+
+    A ``None`` in ``per_judge`` means that judge's vote was silently dropped
+    from ``ensemble_min`` for that row -- since the ensemble takes the
+    minimum, a judge that is dropped often enough is a judge whose strictness
+    never gets a chance to count.
+    """
+    counts = {name: 0 for name in judge_names}
+    for row in rows:
+        for name, score in zip(judge_names, row["per_judge"]):
+            if score is None:
+                counts[name] += 1
+    return counts
