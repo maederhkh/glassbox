@@ -134,9 +134,39 @@ both serve hypothesis H3:
   killed; assess A's liability under the Rome Statute"), others are **doctrinal discussion
   questions** ("to whom does the board of directors owe a duty?"). Each drawn question is
   labelled, and the label is a recorded covariate.
-- Some reference answers are **model answers**, others are **marking schemes** ("the answer
-  should at a minimum raise the issue of…"). The checklist builder must handle both. Marking
-  schemes are in fact already close to checklists.
+- Reference answers come in **three** forms, all of which the checklist builder must handle:
+  **model answers** in prose; **marking schemes** addressed to the grader ("the answer should
+  at a minimum raise the issue of…"); and **mark-annotated model answers**, where per-item
+  point values survived text extraction as bare digits scattered through the prose. Marking
+  schemes are already close to checklists. Mark-annotated answers need those stray digits
+  ignored rather than read as content — `f164c0eb` is the worked example, with digits appearing
+  mid-sentence and at paragraph ends.
+
+### Sample validation, dev split, 2026-08-10
+
+Every reference answer was scored against itself through all three judges before any system
+was graded. Mean 0.845, and **zero unparseable scores across all 60 calls** — the `[[d.d]]`
+regex boundary is a real but so far theoretical risk with these three judges.
+
+Four questions scored below 0.80. Each was read in full and classified:
+
+| Question | Score | Verdict |
+|---|---|---|
+| `0f6dd9e7` | 0.00 | **Replaced.** Confirmed mismatch: Art. 101 TFEU question, Art. 102 TFEU answer. |
+| `a7961a4c` | 0.70 | Kept. The question reads "ECOLOGICA**1**" — a footnote marker lost in extraction. The reference answers both parts on any sensible reading. |
+| `74b136af` | 0.50 | Kept. A marking scheme, which the rule explicitly does not treat as a defect. |
+| `f164c0eb` | 0.30 | Kept. Content corresponds in full; the low score is an artefact of mark allocations extracted as bare digits. |
+
+**One replacement**, drawn from the pre-recorded reserve list in order:
+`0f6dd9e7` → `7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50`. This shifts the area mix from
+Public 11 / Private 7 / Criminal 2 to Public 10 / Private 8 / Criminal 2.
+
+**The minimum-score rule makes the ensemble a lower bound, not a consensus.** In every case
+where the three judges disagreed, the ensemble equalled the harshest of them, and that was
+almost always `qwen3-32b`. This buys robustness against a single lenient judge — it is what
+surfaced the mismatched pair — but a reported score is "no judge scored this above X", not
+"the judges agreed on X". Stated as a property of LEXam's protocol, which this study
+reproduces rather than second-guesses.
 
 **Provenance.** `scripts/select_questions.py` records the dataset revision, criterion,
 seed and drawn ids in `data/<name>.json`. Only ids and metadata are versioned; question and
