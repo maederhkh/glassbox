@@ -2157,7 +2157,16 @@ Expected: all PASS
 
 - [ ] **Step 6: Extend `scripts/grade_runs.py` to all three layers**
 
-Replace the body of `main()` so each result is graded on normalised text through all three layers, and a summary table is printed:
+Add these to the imports at the **top of the module**, alongside the existing ones:
+
+```python
+from glassbox.config import CHECKLIST_DIR
+from glassbox.grading.checklist import coverage_fraction, load_checklist, score_checklist
+from glassbox.grading.normalise import normalise
+from glassbox.grading.subscores import score_subscores
+```
+
+Then replace the body of `main()` so each result is graded on normalised text through all three layers, and a summary table is printed:
 
 ```python
 def main() -> None:
@@ -2165,11 +2174,6 @@ def main() -> None:
     p.add_argument("--run-dir", required=True)
     p.add_argument("--questions", default="dev_20")
     a = p.parse_args()
-
-    from glassbox.config import CHECKLIST_DIR
-    from glassbox.grading.checklist import coverage_fraction, load_checklist, score_checklist
-    from glassbox.grading.normalise import normalise
-    from glassbox.grading.subscores import score_subscores
 
     run_dir = Path(a.run_dir) if Path(a.run_dir).is_absolute() else RUNS_DIR / a.run_dir
     results = load_results(run_dir)
