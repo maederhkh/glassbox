@@ -21,6 +21,9 @@ runs/
 # repository never redistributes the benchmark's content.
 data/cache/
 
+# Checklists derived from LEXam reference answers - same restriction as data/cache/
+data/checklists/
+
 # Local caches
 .uv-cache/
 .uv-python/
