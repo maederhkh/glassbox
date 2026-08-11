@@ -531,7 +531,10 @@ class FakeLLMClient:
 
     responses: list[str]
     model: str = "fake-model"
-    temperature: float | None = 0.7
+    # None, mirroring LLMClient. Recipes record getattr(client, "temperature", None)
+    # into result metadata, so a default of 0.7 here would write a temperature into
+    # test fixtures that the real client never sends.
+    temperature: float | None = None
     reasoning_effort: str | None = None
     prompts: list[str] = field(default_factory=list)
     systems: list[str | None] = field(default_factory=list)
