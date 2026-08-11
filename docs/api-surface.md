@@ -397,3 +397,300 @@ Evidence:
   }
 ]
 ```
+
+## Judge temperature support
+
+`JUDGE_TEMPERATURE = 0.0` (config.py) is only meaningful if each judge honours the parameter. Checked via the free `https://openrouter.ai/api/v1/models` metadata endpoint (plus each model's `/endpoints` listing) -- no inference calls, matching Task 1's method for gpt-5-mini. Regenerate with `python scripts/probe_judge_temperature.py`.
+
+### `openai/gpt-4o`
+
+**HONOURED**
+
+### `deepseek/deepseek-chat`
+
+**HONOURED**
+
+### `qwen/qwen3-32b`
+
+**HONOURED**
+
+Evidence:
+
+```json
+[
+  {
+    "model": "openai/gpt-4o",
+    "method": "metadata",
+    "conclusive": true,
+    "temperature_honoured": true,
+    "evidence": {
+      "model_supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "max_completion_tokens",
+        "max_tokens",
+        "prediction",
+        "presence_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_logprobs",
+        "top_p",
+        "web_search_options"
+      ],
+      "model_default_parameters_temperature": null,
+      "per_endpoint_supported_parameters": [
+        {
+          "provider": "Azure",
+          "supported_parameters": [
+            "max_completion_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "web_search_options",
+            "seed",
+            "logit_bias",
+            "logprobs",
+            "top_logprobs",
+            "response_format",
+            "structured_outputs",
+            "tools",
+            "tool_choice"
+          ]
+        },
+        {
+          "provider": "OpenAI",
+          "supported_parameters": [
+            "seed",
+            "max_tokens",
+            "response_format",
+            "structured_outputs",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "web_search_options",
+            "logit_bias",
+            "logprobs",
+            "top_logprobs",
+            "prediction",
+            "tools",
+            "tool_choice"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "model": "deepseek/deepseek-chat",
+    "method": "metadata",
+    "conclusive": true,
+    "temperature_honoured": true,
+    "evidence": {
+      "model_supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_p"
+      ],
+      "model_default_parameters_temperature": null,
+      "per_endpoint_supported_parameters": [
+        {
+          "provider": "StreamLake",
+          "supported_parameters": [
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "frequency_penalty",
+            "stop",
+            "presence_penalty",
+            "response_format",
+            "structured_outputs",
+            "tools",
+            "tool_choice"
+          ]
+        },
+        {
+          "provider": "DeepInfra",
+          "supported_parameters": [
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "repetition_penalty",
+            "top_k",
+            "seed",
+            "min_p",
+            "response_format",
+            "logit_bias",
+            "structured_outputs",
+            "tools",
+            "tool_choice"
+          ]
+        },
+        {
+          "provider": "Novita",
+          "supported_parameters": [
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "seed",
+            "top_k",
+            "repetition_penalty",
+            "tools",
+            "tool_choice"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "model": "qwen/qwen3-32b",
+    "method": "metadata",
+    "conclusive": true,
+    "temperature_honoured": true,
+    "evidence": {
+      "model_supported_parameters": [
+        "frequency_penalty",
+        "include_reasoning",
+        "logit_bias",
+        "logprobs",
+        "max_tokens",
+        "min_p",
+        "presence_penalty",
+        "reasoning",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_logprobs",
+        "top_p"
+      ],
+      "model_default_parameters_temperature": null,
+      "per_endpoint_supported_parameters": [
+        {
+          "provider": "DeepInfra",
+          "supported_parameters": [
+            "reasoning",
+            "include_reasoning",
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "repetition_penalty",
+            "top_k",
+            "seed",
+            "min_p",
+            "response_format",
+            "tools",
+            "tool_choice",
+            "logit_bias",
+            "structured_outputs"
+          ]
+        },
+        {
+          "provider": "Nebius",
+          "supported_parameters": [
+            "reasoning",
+            "include_reasoning",
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "frequency_penalty",
+            "presence_penalty",
+            "seed",
+            "top_k",
+            "logit_bias",
+            "tools",
+            "tool_choice",
+            "response_format",
+            "structured_outputs",
+            "repetition_penalty"
+          ]
+        },
+        {
+          "provider": "Alibaba",
+          "supported_parameters": [
+            "reasoning",
+            "include_reasoning",
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "seed",
+            "presence_penalty",
+            "response_format",
+            "tools",
+            "tool_choice",
+            "top_k",
+            "frequency_penalty",
+            "stop"
+          ]
+        },
+        {
+          "provider": "SiliconFlow",
+          "supported_parameters": [
+            "reasoning",
+            "include_reasoning",
+            "structured_outputs",
+            "response_format",
+            "temperature",
+            "top_p",
+            "top_k",
+            "frequency_penalty",
+            "tools",
+            "tool_choice",
+            "max_tokens"
+          ]
+        },
+        {
+          "provider": "Groq",
+          "supported_parameters": [
+            "reasoning",
+            "include_reasoning",
+            "max_tokens",
+            "temperature",
+            "top_p",
+            "stop",
+            "seed",
+            "response_format",
+            "logprobs",
+            "top_logprobs"
+          ]
+        }
+      ]
+    }
+  }
+]
+```
