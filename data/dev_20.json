@@ -29,13 +29,13 @@
       "answer_words": 317
     },
     {
-      "id": "0f6dd9e7-b07b-4430-9fe3-0e77426a8c36",
-      "course": "European Economic Law",
-      "area": "Public",
-      "jurisdiction": "International",
-      "year": "2023",
-      "question_words": 192,
-      "answer_words": 496
+      "id": "7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50",
+      "course": "Gesellschaftsrecht",
+      "area": "Private",
+      "jurisdiction": "Swiss",
+      "year": "2019",
+      "question_words": 237,
+      "answer_words": 726
     },
     {
       "id": "104d4012-4068-468b-b403-a44d25d1fdaf",
@@ -202,15 +202,6 @@
   ],
   "reserves": [
     {
-      "id": "7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50",
-      "course": "Gesellschaftsrecht",
-      "area": "Private",
-      "jurisdiction": "Swiss",
-      "year": "2019",
-      "question_words": 237,
-      "answer_words": 726
-    },
-    {
       "id": "c920aa5e-af86-4f35-a116-f6e64a1b133f",
       "course": "Comparative Private Law",
       "area": "Private",
@@ -218,6 +209,14 @@
       "year": "2019",
       "question_words": 608,
       "answer_words": 229
+    }
+  ],
+  "replacements": [
+    {
+      "removed": "0f6dd9e7-b07b-4430-9fe3-0e77426a8c36",
+      "substituted": "7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50",
+      "position": 1,
+      "reason": "reference answer does not correspond to the question: question asks whether an RRP clause and 5-year exclusive-purchasing obligation between Cinestar/Popcorn Paradise violate Art. 101 TFEU; reference instead analyses a different fact pattern (parties X/Y, refusal to supply) under Art. 102 TFEU. Confirmed by calibration gate (Task 6): 2/3 judges scored the reference against itself at or near 0, both explicitly naming the provision/party mismatch."
     }
   ]
 }

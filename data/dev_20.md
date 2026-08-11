@@ -7,7 +7,7 @@ Dataset revision `31e57ae395f92ed7284a4c28d278c55da892b898`.
 | # | course | area | jurisdiction | year | q words | a words | id |
 |---|---|---|---|---|---|---|---|
 | 1 | International Financial Law | Public | International | 2017 | 80 | 317 | `d23b9d97-d802-4ec6-a915-dda8c303149d` |
-| 2 | European Economic Law | Public | International | 2023 | 192 | 496 | `0f6dd9e7-b07b-4430-9fe3-0e77426a8c36` |
+| 2 | Gesellschaftsrecht | Private | Swiss | 2019 | 237 | 726 | `7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50` |
 | 3 | European Economic Law | Public | International | 2022 | 461 | 1147 | `104d4012-4068-468b-b403-a44d25d1fdaf` |
 | 4 | International Human Rights | Public | International | 2016 | 268 | 206 | `ca81b0a3-8d16-4e72-8c3c-449f02442765` |
 | 5 | International Economic Law | Public | International | 2017 | 142 | 155 | `a7961a4c-78bc-4291-bf26-7a5809b9e6bc` |
