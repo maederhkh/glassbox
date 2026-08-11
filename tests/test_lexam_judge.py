@@ -52,3 +52,41 @@ def test_judge_answer_across_multiple_judges_takes_the_minimum():
     assert isinstance(verdict, JudgeVerdict)
     assert verdict.score == 0.4
     assert verdict.per_judge == [0.9, 0.4]
+
+
+# --- Deliberate contract boundary, not a bug --------------------------------
+#
+# SCORE_PATTERN (`\[\[(\d\.\d)\]\]`) matches only a single digit, a literal
+# dot, and a single digit. That means well-intentioned scores a judge model
+# might plausibly emit -- a bare "[[1]]" for a perfect score, an unclamped
+# two-digit "[[10]]", or a finer-grained "[[0.75]]" -- do NOT match and parse
+# as None, exactly like genuinely unparseable text.
+#
+# This is LEXam's own published regex, reproduced verbatim for leaderboard
+# comparability (see the module docstring and JUDGE_TEMPERATURE commentary in
+# config.py). Loosening it to accept "[[1]]" or "[[0.75]]" would silently
+# diverge from the protocol this study claims to follow -- a worse outcome
+# than the narrow parsing it causes. So the fix here is not to the regex; it
+# is to pin this boundary with tests, so a future reader who trips over
+# `parse_score("[[1]]") is None` finds a deliberate, documented contract
+# instead of mistaking it for an oversight and "fixing" it.
+#
+# The operational consequence -- a judge dropped this way vanishes from
+# `ensemble_min`'s input entirely, which can bias the ensemble score upward
+# if the dropped judge happened to be the strict one -- is not silent at the
+# JudgeVerdict level: it is always visible per-judge in
+# `JudgeVerdict.per_judge` (a None in that list). Surfacing per-judge None
+# rates in run-level reporting is a follow-up for the task that builds the
+# score summary, not this module.
+
+
+def test_bare_integer_score_is_not_parsed():
+    assert parse_score("The correctness score: [[1]]") is None
+
+
+def test_finer_grained_decimal_score_is_not_parsed():
+    assert parse_score("The correctness score: [[0.75]]") is None
+
+
+def test_two_digit_score_is_not_parsed():
+    assert parse_score("The correctness score: [[10]]") is None
