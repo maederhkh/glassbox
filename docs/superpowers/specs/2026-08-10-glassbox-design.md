@@ -97,9 +97,35 @@ before the draw, applied identically to every condition, and the number of quest
 keeps is reported. Sampling is simple random **within** the criterion, with a fixed seed;
 the resulting area, jurisdiction and course mix is reported rather than forced.
 
-**Replacement rule.** A drawn question that is still recall or essay on inspection is
-replaced by the next question in the shuffled order, and the number of replacements is
-reported.
+**Replacement rule.** A drawn question is replaced by the next question in the pre-recorded
+shuffled reserve order, with every replacement reported, when either holds:
+
+1. it is still recall or essay on inspection, or
+2. **its reference answer does not correspond to the question** — a data defect in the
+   source dataset rather than a property of the question.
+
+**Detecting (2).** The calibration gate's first check — score each reference answer against
+itself — doubles as a dataset validator. An expert answer graded against itself should score
+near the top; a low score means either a mismatched pair or a reference written as a marking
+scheme. Every drawn question is put through this check before any system is scored, and the
+per-question results are reported.
+
+This rule was written before the check was run over the full sample, so it cannot have been
+shaped by which questions failed.
+
+**Confirmed defect, dev split, 2026-08-10.** Question `0f6dd9e7-b07b-4430-9fe3-0e77426a8c36`
+(European Economic Law) asks whether contractual provisions — a recommended resale price and
+a five-year exclusive-purchasing obligation — violate **Art. 101 TFEU**. Its reference answer
+analyses **Art. 102 TFEU** abuse of dominance and refusal to supply, citing *United Brands*
+and *Benzine en Petroleum*, and refers to a party "Y" that appears nowhere in the question.
+The pair is unrelated. This is worth reporting to the LEXam authors, and worth noting in the
+write-up as a benchmark data-quality observation.
+
+**Incidental evidence for the minimum-score ensemble.** On that defective pair, `gpt-4o` and
+`qwen3-32b` both scored it low and named the mismatch explicitly in their explanations, while
+`deepseek-chat` scored it 0.9 — apparently on surface similarity rather than correspondence.
+Taking the **minimum** surfaced the defect; averaging would have muted it. LEXam's choice of
+rule earns its keep here.
 
 **Two residual heterogeneities**, deliberately *labelled rather than filtered*, because
 both serve hypothesis H3:
