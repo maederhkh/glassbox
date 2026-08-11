@@ -361,9 +361,15 @@ project's main contribution).
 
 ### 7.2 Why the checklist matters
 
-- **Statistical power.** 30 questions × ~5–8 points ≈ 150–250 scoring units instead of 30
-  holistic scores. Item-level near-binary judgments are far more reliable than 1–10 quality
-  ratings.
+- **Measurement resolution, not sample size.** *An earlier draft of this spec claimed the
+  checklist turns 30 questions into "150–250 scoring units, which is where your statistical
+  power comes from". That was wrong and is retracted.* Points within a question are heavily
+  correlated — five points describing the same fact pattern are one fact, not five independent
+  observations — so treating them as independent would overstate precision. **The unit of
+  analysis is the question.** What the checklist actually buys is a far more *resolved*
+  per-question measurement: a coverage fraction like 0.62 discriminates where the holistic
+  judge only ever says 0.8 or 0.9 (§4). Given that judge's measured saturation, resolution is
+  the property the study needs, and it is a real gain — but it is not extra n.
 - **Propagation, measured.** The same point list is traced through all four stages: a point
   absent at Stage 1 and never recovered is propagation as a number, not a narrative.
 - **Not self-authored ground truth.** No legal content is invented — the experts' answer is
@@ -384,6 +390,35 @@ grader must not see it.
 An LLM drafts each point list from the expert answer; **the author verifies all 30 by
 hand**; the lists are then committed and never modified. Freezing first removes any
 possibility of tuning the rubric toward a recipe.
+
+#### Granularity, measured on the dev set 2026-08-10
+
+The drafted lists came out **finer than a real examiner's marking**. Across 20 questions: 370
+points, median 18.5, range 6–37. One automated retighten took the median from 29 to 18.5; the
+target band was 5–10.
+
+The calibration evidence is one reference answer carrying the original examiner's own mark
+allocations, which survived text extraction as bare digits (`f164c0eb`). That examiner awarded
+**11 marks across 9 items** for a 581-word answer; the drafted checklist gave it **18 points** —
+roughly 1.6× finer. The excess is concentrated in descriptive and contextual material: five
+separate points covered what an examiner would plausibly credit as one, "correctly identifies
+the text as from the 1900 Paris Congress".
+
+Two consequences, neither fatal:
+
+- **It does not bias the comparison between recipes.** Correlated points move together, so a
+  recipe is neither helped nor harmed by them in expectation. It adds noise per point, not bias.
+- **It does weight questions unevenly.** A question whose reference happens to be descriptive
+  earns more points than one that is tightly reasoned, so an unweighted pooled coverage figure
+  would weight by reference *style* rather than by legal difficulty. Coverage is therefore
+  computed **per question first**, then averaged across questions — never pooled over raw points.
+
+**The operating rule for the human verification pass:** a point should correspond to something
+a grader would award a mark for. If splitting a proposition in two would not earn a candidate
+two separate marks, it is one point. A rule statement together with its application to the facts
+is usually one mark, not two. **Merging over-split points is part of verification, not a
+separate step** — the drafted lists are a starting point, and no automated retighten will match
+an examiner's judgment as well as the author's own pass.
 
 ### 7.5 Human validation of the grader
 
