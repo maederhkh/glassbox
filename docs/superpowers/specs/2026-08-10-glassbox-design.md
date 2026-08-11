@@ -123,6 +123,7 @@ redistributes LEXam's content.
 
 | Setting | Value |
 |---|---|
+| Provider | OpenRouter, for both the system model and all three judges |
 | Model | GPT-5-mini (LEXam open-question score 60.3) |
 | Temperature | ~0.7 for all recipes and stages |
 | Reasoning effort | Held constant across Plain / Structured / Pipeline; raised only in Think-longer |
@@ -133,9 +134,9 @@ leaves little headroom; a null result would be uninterpretable — indistinguish
 "there was no room to show an effect." A weak model risks failing to hold the four-stage
 format at all, which would turn the study into a measure of instruction-following.
 
-**Why not GPT-4o.** GPT-4o is one of LEXam's three graders. GPT-5-mini shares a vendor
-family with one grader, which the minimum-score ensemble rule dampens and the independent
-checklist metric bypasses. Stated as a limitation, not hidden.
+**Why not GPT-4o as the system model.** GPT-4o is one of LEXam's three graders. GPT-5-mini
+shares a vendor family with one of the three, which the minimum-score ensemble rule dampens
+and the independent checklist metric bypasses. Stated as a limitation, not hidden.
 
 ---
 
@@ -246,7 +247,8 @@ project's main contribution).
 
 1. **LEXam's official grader** — minimum-score ensemble of GPT-4o + DeepSeek-V3 +
    Qwen3-32B, as of their September 2025 update. Keeps results comparable to published
-   work.
+   work. All three are reached through OpenRouter, so the published protocol is used in
+   full rather than approximated by a single judge.
 2. **Per-criterion sub-scores** — issue spotting, rule recall, rule application,
    conclusion. These are LEXam's own validated criteria and they map directly onto the four
    pipeline stages, giving stage-level attribution without inventing a rubric.

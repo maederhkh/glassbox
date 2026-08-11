@@ -10,8 +10,9 @@
 
 ## Global Constraints
 
-- Primary system model: **GPT-5-mini**. Temperature **0.7**. Same model for every recipe and every stage.
-- Judge model for Phase 1: **gpt-4o** only. The ensemble interface accepts N judges and returns the **minimum** score; DeepSeek-V3 and Qwen3-32B are added later via config once a provider exists. This deviation from LEXam's current three-judge ensemble must be recorded in results metadata.
+- **All model access goes through OpenRouter**, using the OpenAI SDK with `base_url="https://openrouter.ai/api/v1"` and `OPENROUTER_API_KEY`. Model ids are namespaced (`openai/gpt-5-mini`, not `gpt-5-mini`). Nothing talks to `api.openai.com`.
+- Primary system model: **`openai/gpt-5-mini`**. Temperature **0.7**. Same model for every recipe and every stage.
+- Judges: LEXam's full three-judge ensemble — **`openai/gpt-4o`, `deepseek/deepseek-chat`, `qwen/qwen3-32b`** — scored as the **minimum** of the three, matching their September 2025 protocol. Model slugs are unverified guesses until Task 1's probe confirms them; a wrong slug must surface in Task 1, not in Task 6.
 - LEXam judge scale is **0.0–1.0 in 0.1 increments**, emitted as `[[0.7]]`, parsed with `r"\[\[(\d\.\d)\]\]"`, clamped to `[0, 1]`, `None` if unparseable.
 - Question set for all Phase 1 work: **`data/dev_20.json`** (dev split). The `test` split is never touched in Phase 1.
 - Inclusion criterion, already frozen in `scripts/select_questions.py`: English, answer ≥ 150 words, question ≥ 50 words, `area != "Interdisciplinary"`.
@@ -108,7 +109,7 @@ pythonpath = ["src", "."]
 - [ ] **Step 2: Create `.env.example`**
 
 ```
-OPENAI_API_KEY=sk-your-key-here
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
 
 - [ ] **Step 3: Install**
@@ -121,10 +122,13 @@ Then copy `.env.example` to `.env` and paste your real key into it. `.env` is al
 - [ ] **Step 4: Write the probe script**
 
 ```python
-"""Record which OpenAI API parameters GPT-5-mini actually accepts.
+"""Record what OpenRouter actually accepts for the models this study uses.
 
-Run once, on Day 1. The result is written to docs/api-surface.md and the rest
-of the codebase is built against whatever this reports as working.
+Run once, on Day 1. Two unknowns are settled here: which call parameters
+gpt-5-mini honours, and whether every model slug in the study resolves at all.
+A wrong judge slug discovered on Day 3 wastes a day; discovered here it costs
+nothing. The result is written to docs/api-surface.md and the rest of the
+codebase is built against whatever this reports as working.
 """
 
 import json
@@ -134,8 +138,12 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-MODEL = "gpt-5-mini"
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+MODEL = "openai/gpt-5-mini"
+JUDGE_SLUGS = ["openai/gpt-4o", "deepseek/deepseek-chat", "qwen/qwen3-32b"]
 QUESTION = "In one sentence, what is the doctrine of consideration in contract law?"
 
 results = []
@@ -174,11 +182,17 @@ attempt("chat: reasoning_effort=high", lambda: client.chat.completions.create(
     model=MODEL, messages=[{"role": "user", "content": QUESTION}],
     reasoning_effort="high"))
 
-attempt("responses: plain", lambda: client.responses.create(
-    model=MODEL, input=QUESTION))
+attempt("chat: extra_body reasoning effort=low", lambda: client.chat.completions.create(
+    model=MODEL, messages=[{"role": "user", "content": QUESTION}],
+    extra_body={"reasoning": {"effort": "low"}}))
 
-attempt("responses: reasoning effort=low", lambda: client.responses.create(
-    model=MODEL, input=QUESTION, reasoning={"effort": "low"}))
+attempt("chat: extra_body reasoning effort=high", lambda: client.chat.completions.create(
+    model=MODEL, messages=[{"role": "user", "content": QUESTION}],
+    extra_body={"reasoning": {"effort": "high"}}))
+
+for slug in JUDGE_SLUGS:
+    attempt(f"slug resolves: {slug}", lambda s=slug: client.chat.completions.create(
+        model=s, messages=[{"role": "user", "content": "Reply with the digit 1."}]))
 
 print("\n" + json.dumps(results, indent=2))
 
@@ -200,10 +214,11 @@ print("\nwrote docs/api-surface.md")
 Run: `python scripts/probe_api.py`
 Expected: a table of OK/FAIL lines, and `docs/api-surface.md` written.
 
-**Read the output before continuing.** Three things must be settled:
-1. Which API works — Chat Completions or Responses. Build Task 2 against whichever succeeds.
-2. Whether `temperature` is accepted. If GPT-5-mini rejects it, **record that**, set temperature to the model default everywhere, and note in the spec's limitations that sampling variation comes from the model default rather than a chosen temperature. Do not silently drop it.
-3. Which `reasoning_effort` values are accepted. Recipe 3 needs at least two distinct levels. If only one exists, Recipe 3 falls back to the approximate length-based variant already flagged in spec §5, and that must be recorded.
+**Read the output before continuing.** Four things must be settled:
+1. Whether `temperature` is accepted. If gpt-5-mini rejects it, **record that**, set temperature to the model default everywhere, and note in the spec's limitations that sampling variation comes from the model default rather than a chosen temperature. Do not silently drop it.
+2. How reasoning effort is passed — top-level `reasoning_effort`, `extra_body={"reasoning": {...}}`, or neither. Recipe 3 needs at least two distinct levels that measurably change token spend. If no form works, Recipe 3 falls back to the approximate length-based variant already flagged in spec §5, and that must be recorded.
+3. **Whether all four model slugs resolve.** The three judge slugs are educated guesses. Any that fails must be corrected here — check OpenRouter's model list for the right slug and re-run the probe. Do not leave a broken slug for Task 6 to discover.
+4. Whether `reasoning_tokens` appears in the usage payload. OpenRouter's usage shape can differ from OpenAI's; Task 2's accounting depends on knowing where reasoning tokens live, or that they are absent.
 
 - [ ] **Step 6: Commit**
 
@@ -328,7 +343,9 @@ CHECKLIST_DIR = DATA_DIR / "checklists"
 OUTPUT_DIR = REPO_ROOT / "output"
 RUNS_DIR = OUTPUT_DIR / "runs"
 
-SYSTEM_MODEL = "gpt-5-mini"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+SYSTEM_MODEL = "openai/gpt-5-mini"
 SYSTEM_TEMPERATURE = 0.7
 
 # Recipe 3 raises this. Confirm the accepted values against docs/api-surface.md
@@ -336,18 +353,19 @@ SYSTEM_TEMPERATURE = 0.7
 EFFORT_BASELINE = "low"
 EFFORT_RAISED = "high"
 
-# Phase 1 uses gpt-4o alone: LEXam's original, human-validated judge. Their current
-# leaderboard uses the minimum of gpt-4o, DeepSeek-V3 and Qwen3-32B. Append those here
-# once a provider is available; ensemble_min handles any number of judges.
-JUDGE_MODELS = ("gpt-4o",)
+# LEXam's September 2025 protocol: the minimum of three judges. Correct any slug
+# the Task 1 probe reported as unresolvable.
+JUDGE_MODELS = ("openai/gpt-4o", "deepseek/deepseek-chat", "qwen/qwen3-32b")
 JUDGE_TEMPERATURE = 0.0
 
-# USD per million tokens. VERIFY against current OpenAI pricing before trusting any
-# cost figure. A model absent from this table reports cost as None rather than zero,
-# so a missing price can never masquerade as a free call.
+# USD per million tokens. VERIFY against current OpenRouter pricing before trusting
+# any cost figure. A model absent from this table reports cost as None rather than
+# zero, so a missing price can never masquerade as a free call.
 PRICING_PER_MTOK: dict[str, dict[str, float]] = {
-    "gpt-5-mini": {"input": 0.25, "output": 2.00},
-    "gpt-4o": {"input": 2.50, "output": 10.00},
+    "openai/gpt-5-mini": {"input": 0.25, "output": 2.00},
+    "openai/gpt-4o": {"input": 2.50, "output": 10.00},
+    "deepseek/deepseek-chat": {"input": 0.28, "output": 0.88},
+    "qwen/qwen3-32b": {"input": 0.10, "output": 0.30},
 }
 
 MAX_ATTEMPTS = 5
@@ -425,7 +443,9 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from glassbox.config import MAX_ATTEMPTS, SYSTEM_MODEL, SYSTEM_TEMPERATURE
+from glassbox.config import (
+    MAX_ATTEMPTS, OPENROUTER_BASE_URL, SYSTEM_MODEL, SYSTEM_TEMPERATURE,
+)
 from glassbox.usage import Usage
 
 
@@ -450,7 +470,10 @@ class LLMClient:
         self.model = model
         self.temperature = temperature
         self.reasoning_effort = reasoning_effort
-        self._client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        self._client = OpenAI(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=os.environ["OPENROUTER_API_KEY"],
+        )
 
     @retry(stop=stop_after_attempt(MAX_ATTEMPTS),
            wait=wait_exponential(multiplier=2, min=2, max=60))
@@ -533,7 +556,7 @@ Expected: all 8 PASS
 
 Run: `python -c "from glassbox.llm import LLMClient; from glassbox.usage import cost_usd; c=LLMClient(); r=c.complete('In one sentence, what is promissory estoppel?'); print(r.text); print(r.usage); print('USD', cost_usd(r.usage, r.model)); print('%.2fs' % r.seconds)"`
 
-Expected: a one-sentence answer, non-zero token counts, a cost figure, and a latency under ~30s. If `temperature` or `reasoning_effort` errors here, fix `_call` to match `docs/api-surface.md`.
+Expected: a one-sentence answer, non-zero token counts, a cost figure, and a latency under ~30s. If `temperature` or the reasoning-effort parameter errors here, fix `_call` to match `docs/api-surface.md` — including whether effort is passed top-level or via `extra_body`.
 
 - [ ] **Step 9: Commit**
 
@@ -2691,8 +2714,8 @@ Phases 2 and 3 are deliberately not specified in detail here. The pipeline's sta
 
 ## Open items carried forward
 
-1. **Judge ensemble.** Phase 1 uses gpt-4o alone. Add DeepSeek-V3 and Qwen3-32B to `JUDGE_MODELS` once a provider exists, or record the deviation in the write-up.
-2. **Pricing.** Verify `PRICING_PER_MTOK` against current OpenAI pricing before quoting any cost figure.
+1. **Judge slugs.** `deepseek/deepseek-chat` and `qwen/qwen3-32b` are educated guesses at OpenRouter's naming, and `deepseek-chat` must be the V3 generation LEXam used, not a later one. Task 1's probe confirms resolution; confirm the *generation* against OpenRouter's model page and record what was used.
+2. **Pricing.** Verify `PRICING_PER_MTOK` against current OpenRouter pricing before quoting any cost figure. OpenRouter also returns actual cost per request, which is worth preferring over a static table if the field is present.
 3. **Reasoning effort.** If the probe showed GPT-5-mini has no usable effect from `reasoning_effort`, Recipe 3 needs the fallback from spec §5 and the approximation must be reported.
 4. **Contamination.** Unknown whether LEXam is in training data. Report per-question baseline scores and note any ceiling saturation as a finding rather than filtering questions.
 5. **Pre-registration.** Register the inclusion criterion and the six hypotheses on OSF before drawing the evaluation set from the `test` split.
