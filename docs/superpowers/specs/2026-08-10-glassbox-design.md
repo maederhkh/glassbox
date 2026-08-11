@@ -61,22 +61,61 @@ decompose internally?"*
 [code](https://github.com/LEXam-Benchmark/LEXam),
 [data](https://huggingface.co/datasets/LEXam-Benchmark/LEXam)).
 
-**Fields:** `question`, `answer` (expert reference), `guidance`, `course`, `language`
-(`en`/`de`), `area` (criminal / public / private / interdisciplinary), `jurisdiction`
-(Swiss / international / generic), `year`, `id`.
+**Fields, as actually released:** `question`, `answer` (expert reference), `course`,
+`language` (`en`/`de`), `area` (Criminal / Public / Private / Interdisciplinary),
+`jurisdiction` (Swiss / International / Generic), `year`, `id`.
 
-**Sample:** 30 questions, `language == "en"` only, stratified across `area` and
-`jurisdiction` with a fixed random seed. The selected `id` list is committed to the repo
-and never changed. Reference-answer length and checklist-point count are recorded per
-question so hypothesis H3 can be examined.
+There is **no `guidance` column** in the Hugging Face release, despite the paper
+describing one. Nothing therefore needs to be withheld from the model, and the earlier
+concern about leaking the reasoning plan to the single-pass recipes does not arise.
 
-Roughly 17% of LEXam's open questions are English (~440 in the test set), so 30 is a
-small but properly stratified sample of an adequate pool.
+**Splits.** `open_question` ships `dev` (300 rows, 80 English) and `test` (2,541 rows, 436
+English). The **development set is drawn from `dev`** and the **evaluation set from
+`test`**, so the two are disjoint by construction and the pipeline cannot be tuned on the
+questions it is later measured on.
 
-**The `guidance` field is given to the grader only, never to the model, in any recipe.**
-Feeding it to the model would hand the single-pass recipes the reasoning plan and destroy
-the contrast the study depends on. Whether LEXam's own protocol does this must be
-confirmed against their grading code (see §12).
+### Inclusion criterion
+
+LEXam's English open questions are heterogeneous. Of 436 in the test split, 99 have
+reference answers under 50 words and are factual recall — *"What are the requirements to
+take the bar exam?"* → *"J.D."* A staged legal-reasoning pipeline is not applicable to
+such questions; including them would let question-type mismatch drive the result.
+
+The study's population is therefore defined, and pre-registered, as:
+
+| Filter | Reason |
+|---|---|
+| `language == "en"` | The prototype is English-only |
+| `answer` ≥ 150 words | Proxy for "requires analysis rather than recall" |
+| `question` ≥ 50 words | Proxy for "has a fact pattern or substantive prompt" |
+| `area != "Interdisciplinary"` | Holds Legal Theory and Legal Sociology — moral philosophy and social theory essays, which have no issues, rules or elements to decompose |
+
+This yields **22 eligible in `dev`** and **143 in `test`**.
+
+This is population definition, not cherry-picking: the criterion is objective, fixed
+before the draw, applied identically to every condition, and the number of questions it
+keeps is reported. Sampling is simple random **within** the criterion, with a fixed seed;
+the resulting area, jurisdiction and course mix is reported rather than forced.
+
+**Replacement rule.** A drawn question that is still recall or essay on inspection is
+replaced by the next question in the shuffled order, and the number of replacements is
+reported.
+
+**Two residual heterogeneities**, deliberately *labelled rather than filtered*, because
+both serve hypothesis H3:
+
+- Some questions are **fact-pattern subsumption problems** ("A ordered 20,000 civilians
+  killed; assess A's liability under the Rome Statute"), others are **doctrinal discussion
+  questions** ("to whom does the board of directors owe a duty?"). Each drawn question is
+  labelled, and the label is a recorded covariate.
+- Some reference answers are **model answers**, others are **marking schemes** ("the answer
+  should at a minimum raise the issue of…"). The checklist builder must handle both. Marking
+  schemes are in fact already close to checklists.
+
+**Provenance.** `scripts/select_questions.py` records the dataset revision, criterion,
+seed and drawn ids in `data/<name>.json`. Only ids and metadata are versioned; question and
+answer text is cached under `data/cache/` and gitignored, so the repository never
+redistributes LEXam's content.
 
 ---
 
@@ -353,7 +392,7 @@ instrument.
 
 | # | Component | Note |
 |---|---|---|
-| 1 | Data loading + stratified sample + frozen id list | |
+| 1 | Data loading + frozen sample (`scripts/select_questions.py`) | **done** — `data/dev_20.json` |
 | 2 | Runner skeleton + Recipe 1 (Plain), one question end to end | |
 | 3 | Grader with LEXam's official score only → **calibration gate** | see below |
 | 4 | Checklist builder + checklist grading | author verifies all 30 by hand |
@@ -383,13 +422,15 @@ hand-scores.
 
 ## 12. Open items to resolve at build time
 
-1. **Does LEXam's protocol feed `guidance` to the model or only to the grader?** Confirm in
-   `customized_judge_async.py` / `evaluation.py`. This design assumes grader-only. If their
-   protocol differs, the deviation must be reported.
+1. ~~Does LEXam's protocol feed `guidance` to the model or only to the grader?~~
+   **Resolved 2026-08-10:** there is no `guidance` column in the released dataset, so
+   nothing needs withholding. If their evaluation code sources guidance elsewhere, note it.
 2. **Grading scale.** The paper refers to both 0–10 and 0–100 in different places. Pin down
    the actual scale and the exact minimum-score ensemble rule from their code.
-3. **English question distribution** across `area` and `jurisdiction` — confirm the intended
-   stratification is achievable with 30 questions.
+3. ~~English question distribution across `area` and `jurisdiction`.~~
+   **Resolved 2026-08-10:** 143 eligible English questions in `test`
+   (Private 76 / Public 56 / Criminal 11; International 129 / Generic 16 / Swiss 6, across
+   19 courses). Ample for a random draw of 30.
 4. **GPT-5-mini reasoning-effort values and pricing** — confirm the available settings support
    Recipe 3, and the total cost of ~1,300 calls.
 5. **Contamination.** Unknown whether LEXam is in training data. Report baseline per-question

@@ -16,6 +16,11 @@ output/
 runs/
 *.jsonl.gz
 
+# LEXam question and answer text - re-fetched from Hugging Face by
+# scripts/select_questions.py. Only ids and metadata are versioned, so the
+# repository never redistributes the benchmark's content.
+data/cache/
+
 # Local caches
 .uv-cache/
 .uv-python/

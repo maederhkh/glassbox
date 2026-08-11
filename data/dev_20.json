@@ -1,0 +1,223 @@
+{
+  "name": "dev_20",
+  "dataset": "LEXam-Benchmark/LEXam",
+  "dataset_revision": "31e57ae395f92ed7284a4c28d278c55da892b898",
+  "config": "open_question",
+  "split": "dev",
+  "language": "en",
+  "criterion": {
+    "min_answer_words": 150,
+    "min_question_words": 50,
+    "excluded_areas": [
+      "Interdisciplinary"
+    ]
+  },
+  "population": {
+    "english_in_split": 80,
+    "eligible_after_criterion": 22
+  },
+  "seed": 20260810,
+  "n": 20,
+  "selected": [
+    {
+      "id": "d23b9d97-d802-4ec6-a915-dda8c303149d",
+      "course": "International Financial Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2017",
+      "question_words": 80,
+      "answer_words": 317
+    },
+    {
+      "id": "0f6dd9e7-b07b-4430-9fe3-0e77426a8c36",
+      "course": "European Economic Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2023",
+      "question_words": 192,
+      "answer_words": 496
+    },
+    {
+      "id": "104d4012-4068-468b-b403-a44d25d1fdaf",
+      "course": "European Economic Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2022",
+      "question_words": 461,
+      "answer_words": 1147
+    },
+    {
+      "id": "ca81b0a3-8d16-4e72-8c3c-449f02442765",
+      "course": "International Human Rights",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2016",
+      "question_words": 268,
+      "answer_words": 206
+    },
+    {
+      "id": "a7961a4c-78bc-4291-bf26-7a5809b9e6bc",
+      "course": "International Economic Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2017",
+      "question_words": 142,
+      "answer_words": 155
+    },
+    {
+      "id": "38313965-e4a1-4b33-a014-db898fa092e0",
+      "course": "International Financial Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2016",
+      "question_words": 59,
+      "answer_words": 515
+    },
+    {
+      "id": "7038dd82-d45a-465b-ac8a-a391ec6918d9",
+      "course": "International Finance Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2019",
+      "question_words": 55,
+      "answer_words": 526
+    },
+    {
+      "id": "2a04c4e1-64ea-4156-aa31-58df7cbb63e1",
+      "course": "International Sales Law",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2021",
+      "question_words": 432,
+      "answer_words": 274
+    },
+    {
+      "id": "205b9732-185f-406d-a497-e6b8bbe1ba92",
+      "course": "Foundations and Trusts",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2021",
+      "question_words": 102,
+      "answer_words": 697
+    },
+    {
+      "id": "a9c68c6b-84cb-43c8-b589-a1619ff1b5b3",
+      "course": "International Sales Law",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2021",
+      "question_words": 427,
+      "answer_words": 308
+    },
+    {
+      "id": "f6254823-ee2c-4460-8ab0-165b2a14904e",
+      "course": "International Finance Law",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2021",
+      "question_words": 396,
+      "answer_words": 173
+    },
+    {
+      "id": "627a3358-ec33-499b-b7d1-c37a5cad9bf0",
+      "course": "International Human Rights",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2018",
+      "question_words": 173,
+      "answer_words": 620
+    },
+    {
+      "id": "74b136af-e4e6-4564-9b73-3276e5574830",
+      "course": "Gesellschaftsrecht",
+      "area": "Private",
+      "jurisdiction": "Swiss",
+      "year": "2020",
+      "question_words": 82,
+      "answer_words": 813
+    },
+    {
+      "id": "ba486dee-4750-4d68-9394-d161d9116a1d",
+      "course": "International Criminal Law",
+      "area": "Criminal",
+      "jurisdiction": "International",
+      "year": "2023",
+      "question_words": 203,
+      "answer_words": 485
+    },
+    {
+      "id": "cfe5dc57-0938-4794-90cc-7965e2ec3081",
+      "course": "International Human Rights",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2018",
+      "question_words": 1044,
+      "answer_words": 583
+    },
+    {
+      "id": "f164c0eb-8651-4e5f-b8b1-895e9925957e",
+      "course": "Comparative Private Law",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2022",
+      "question_words": 110,
+      "answer_words": 581
+    },
+    {
+      "id": "6225310f-9e84-4d4a-91ae-e813fb6fbc5d",
+      "course": "International Commercial Arbitration",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2021",
+      "question_words": 178,
+      "answer_words": 164
+    },
+    {
+      "id": "d18bde88-8e0c-4d86-9ccd-0029df76c2c0",
+      "course": "Foundations and Trusts",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2022",
+      "question_words": 217,
+      "answer_words": 493
+    },
+    {
+      "id": "a44183a8-19f3-4d82-a32d-d7e11f7e6c13",
+      "course": "International Criminal Law",
+      "area": "Criminal",
+      "jurisdiction": "International",
+      "year": "2022",
+      "question_words": 158,
+      "answer_words": 437
+    },
+    {
+      "id": "df956c6b-0bae-4a18-a943-36690577c7cd",
+      "course": "International Human Rights",
+      "area": "Public",
+      "jurisdiction": "International",
+      "year": "2017",
+      "question_words": 333,
+      "answer_words": 185
+    }
+  ],
+  "reserves": [
+    {
+      "id": "7e242ffa-dc47-4e8b-aac8-32ed4ddc4d50",
+      "course": "Gesellschaftsrecht",
+      "area": "Private",
+      "jurisdiction": "Swiss",
+      "year": "2019",
+      "question_words": 237,
+      "answer_words": 726
+    },
+    {
+      "id": "c920aa5e-af86-4f35-a116-f6e64a1b133f",
+      "course": "Comparative Private Law",
+      "area": "Private",
+      "jurisdiction": "International",
+      "year": "2019",
+      "question_words": 608,
+      "answer_words": 229
+    }
+  ]
+}
