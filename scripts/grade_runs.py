@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
 from pathlib import Path
 
@@ -101,6 +102,73 @@ def score_one(result, question, judges, grader, checklist_dir: Path) -> dict:
     }
 
 
+def _sorted_rows(existing: dict[tuple[str, str], dict]) -> list[dict]:
+    """The on-disk row order: sorted by (recipe, question_id), matching
+    ``load_results``' own sort -- independent of whatever order a
+    ``run_scoring`` loop happened to visit ``results`` in.
+    """
+    return sorted(existing.values(), key=lambda row: (row["recipe"], row["question_id"]))
+
+
+def _write_scores(path: Path, rows: list[dict]) -> None:
+    """Write ``rows`` to ``path`` as JSON, atomically.
+
+    A plain ``write_text`` leaves a truncated, unparseable file on disk if the
+    process is killed mid-write; ``load_existing_scores`` would then crash on
+    every row, not just the one in flight, on the very next invocation.
+    Writing to a temp file in the same directory first and swapping it in
+    with ``os.replace`` (atomic on both POSIX and Windows) means a kill
+    leaves either the previous complete file or the new complete file in
+    place -- never something in between.
+    """
+    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    os.replace(tmp_path, path)
+
+
+def run_scoring(
+    results, questions: dict, judges, grader, checklist_dir: Path, out_path: Path,
+    limit: int | None = None,
+) -> tuple[list[dict], int]:
+    """Score every result in ``results`` not already present at ``out_path``,
+    persisting after every new row. Returns ``(rows, scored_this_run)``:
+    ``rows`` is every row on disk by the time this returns (existing rows
+    plus whatever was newly scored this call), ``scored_this_run`` is how
+    many were newly scored.
+
+    Each persist writes the full current union of existing and newly scored
+    rows (``_sorted_rows(existing)``), never just the rows ``results``
+    happened to visit so far. Writing a partial prefix would transiently
+    drop any already-scored row that sorts after whatever is being scored
+    right now -- for as long as the loop takes to reach it again, or until
+    the run ends -- and a kill in that window would silently lose a row
+    that real money already paid for.
+    """
+    existing = load_existing_scores(out_path)
+    scored_this_run = 0
+    for i, r in enumerate(results, 1):
+        key = (r.question_id, r.recipe)
+        if key in existing:
+            print(f"[{i}/{len(results)}] {r.question_id[:8]} [already scored]")
+            continue
+        if limit is not None and scored_this_run >= limit:
+            print(f"[{i}/{len(results)}] {r.question_id[:8]} -- not scored yet, "
+                  f"--limit {limit} reached this run; re-run to continue")
+            continue
+
+        q = questions[r.question_id]
+        row = score_one(r, q, judges, grader, checklist_dir)
+        existing[key] = row
+        scored_this_run += 1
+        _write_scores(out_path, _sorted_rows(existing))
+        print(f"[{i}/{len(results)}] {r.question_id[:8]} "
+              f"lexam={row['lexam_score']} coverage={row['coverage']:.2f}")
+
+    rows = _sorted_rows(existing)
+    _write_scores(out_path, rows)
+    return rows, scored_this_run
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--run-dir", required=True)
@@ -134,35 +202,12 @@ def main() -> None:
               f"result in {run_dir} and will not be scored: {', '.join(missing)}\n")
 
     out = run_dir / "scores_provisional.json"
-    existing = load_existing_scores(out)
-
     judges = [LLMClient(model=m, temperature=JUDGE_TEMPERATURE) for m in JUDGE_MODELS]
     grader = LLMClient(model=JUDGE_MODELS[0], temperature=JUDGE_TEMPERATURE)
 
-    rows = []
-    scored_this_run = 0
-    for i, r in enumerate(results, 1):
-        key = (r.question_id, r.recipe)
-        if key in existing:
-            rows.append(existing[key])
-            print(f"[{i}/{len(results)}] {r.question_id[:8]} [already scored]")
-            continue
-        if a.limit is not None and scored_this_run >= a.limit:
-            print(f"[{i}/{len(results)}] {r.question_id[:8]} -- not scored yet, "
-                  f"--limit {a.limit} reached this run; re-run to continue")
-            continue
-
-        q = questions[r.question_id]
-        row = score_one(r, q, judges, grader, CHECKLIST_DIR)
-        rows.append(row)
-        scored_this_run += 1
-        # Persist after every row, not just at the end, so a run stopped partway
-        # through (timeout, --limit, crash) loses at most the row in flight.
-        out.write_text(json.dumps(rows, indent=2), encoding="utf-8")
-        print(f"[{i}/{len(results)}] {r.question_id[:8]} "
-              f"lexam={row['lexam_score']} coverage={row['coverage']:.2f}")
-
-    out.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    rows, scored_this_run = run_scoring(
+        results, questions, judges, grader, CHECKLIST_DIR, out, limit=a.limit
+    )
 
     print(f"\nscored {len(rows)}/{len(results)} results "
           f"({len(rows)}/{len(questions)} of sample {a.questions!r}), "
