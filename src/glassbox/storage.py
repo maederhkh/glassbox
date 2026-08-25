@@ -37,9 +37,29 @@ def _to_result(payload: dict) -> RecipeResult:
     )
 
 
+# A saved RecipeResult is a single JSON object with exactly these top-level keys
+# (see save_result/asdict above). Grading scripts (scripts/grade_runs.py) write
+# their own *.json output -- a list of row dicts, e.g. lexam_scores.json,
+# scores_provisional.json -- into this same run directory, because that is
+# where a human looking for "the scores for this run" will look. glob("*.json")
+# then picks those files up too. Recognising the result shape (rather than
+# hard-coding score filenames) means any future grader output is skipped the
+# same way without storage.py needing to know its name in advance.
+_RESULT_KEYS = frozenset(
+    {"recipe", "question_id", "final_answer", "sections", "stages", "usage",
+     "seconds", "metadata"}
+)
+
+
+def _is_result_payload(payload: object) -> bool:
+    return isinstance(payload, dict) and _RESULT_KEYS.issubset(payload.keys())
+
+
 def load_results(run_dir: Path) -> list[RecipeResult]:
-    results = [
-        _to_result(json.loads(p.read_text(encoding="utf-8")))
-        for p in sorted(Path(run_dir).glob("*.json"))
-    ]
+    results = []
+    for p in sorted(Path(run_dir).glob("*.json")):
+        payload = json.loads(p.read_text(encoding="utf-8"))
+        if not _is_result_payload(payload):
+            continue
+        results.append(_to_result(payload))
     return sorted(results, key=lambda r: (r.recipe, r.question_id))
