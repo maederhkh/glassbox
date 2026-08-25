@@ -26,10 +26,23 @@ _SPACE_RUN = re.compile(r"[ \t]{2,}")
 
 
 def normalise(result: RecipeResult) -> str:
-    if result.sections:
+    # `final_answer` first, sections only as a fallback. Every recipe is graded on
+    # the answer an examiner would actually read.
+    #
+    # The reverse precedence is a validity bug, and a scheduled one: CaseFile.to_sections()
+    # puts the full prose answer INSIDE the sections dict alongside issues, rules,
+    # application and conclusion. Joining the values would hand the grader the analysis
+    # AND an answer restating it - roughly double Recipe 1's content volume, for exactly
+    # the recipes under test, awarded by the component whose whole purpose is to stop
+    # recipe-identifying differences reaching the grader.
+    #
+    # The sections fallback still matters: a schema-following recipe whose output fails
+    # to parse sets sections=None and puts raw text in final_answer, so that path already
+    # takes the first branch. The fallback covers a parse that succeeded without a
+    # final_answer.
+    text = (result.final_answer or "").strip()
+    if not text and result.sections:
         text = "\n\n".join(v.strip() for v in result.sections.values() if v and v.strip())
-    else:
-        text = result.final_answer or ""
 
     text = _FENCE.sub("", text)
     text = _SECTION_HEADING.sub("", text)
