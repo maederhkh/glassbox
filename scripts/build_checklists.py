@@ -12,13 +12,66 @@ from __future__ import annotations
 
 import argparse
 import statistics
+from pathlib import Path
 
 from glassbox.config import CHECKLIST_DIR, SYSTEM_MODEL
-from glassbox.dataset import load_sample
+from glassbox.dataset import Question, load_sample
 from glassbox.grading.checklist import (
     build_checklist, checklist_to_markdown, load_checklist, save_checklist,
 )
 from glassbox.llm import LLMClient
+
+
+def run_build(
+    questions: list[Question],
+    client,
+    checklist_dir: Path,
+    review_dir: Path | None = None,
+    rebuild: bool = False,
+    limit: int | None = None,
+) -> tuple[list[int], list[str], int]:
+    """Build (or skip) a checklist for each question in ``questions``.
+
+    A question that already has a checklist under ``checklist_dir`` is skipped
+    unless ``rebuild`` is True. ``limit``, if given, caps how many *new*
+    checklists this call builds; already-built questions are still reported
+    and do not draw against it. Each checklist is saved as soon as it is
+    built, so a run stopped by ``limit`` (or killed) can be resumed by calling
+    this again without ``rebuild``.
+
+    Returns ``(counts, sources, built)``: ``counts``/``sources`` give the
+    point count and source of every question that has a checklist on disk by
+    the time this returns (whether just built or already present), in the
+    same order as ``questions``; ``built`` is how many were newly built in
+    this call.
+    """
+    checklist_dir = Path(checklist_dir)
+    counts, sources, built = [], [], 0
+    for i, q in enumerate(questions, 1):
+        path = checklist_dir / f"{q.id}.json"
+        if path.exists() and not rebuild:
+            checklist = load_checklist(q.id, checklist_dir)
+            print(f"[{i}/{len(questions)}] {q.id[:8]} {len(checklist.points):>2} points "
+                  f"({checklist.source}) [already built]")
+        elif limit is not None and built >= limit:
+            print(f"[{i}/{len(questions)}] {q.id[:8]} -- not built yet, --limit "
+                  f"{limit} reached this run; re-run to continue")
+            continue
+        else:
+            checklist = build_checklist(q, client)
+            save_checklist(checklist, checklist_dir)
+            if review_dir is not None:
+                review_dir = Path(review_dir)
+                review_dir.mkdir(parents=True, exist_ok=True)
+                (review_dir / f"{q.id}.md").write_text(
+                    checklist_to_markdown(checklist, q), encoding="utf-8"
+                )
+            built += 1
+            print(f"[{i}/{len(questions)}] {q.id[:8]} {len(checklist.points):>2} points "
+                  f"({checklist.source})")
+        counts.append(len(checklist.points))
+        sources.append(checklist.source)
+    return counts, sources, built
 
 
 def main() -> None:
@@ -37,30 +90,11 @@ def main() -> None:
     questions = load_sample(a.questions)
     client = LLMClient(model=SYSTEM_MODEL, temperature=0.0)
     review_dir = CHECKLIST_DIR / "review"
-    review_dir.mkdir(parents=True, exist_ok=True)
 
-    counts, sources, built = [], [], 0
-    for i, q in enumerate(questions, 1):
-        path = CHECKLIST_DIR / f"{q.id}.json"
-        if path.exists() and not a.rebuild:
-            checklist = load_checklist(q.id, CHECKLIST_DIR)
-            print(f"[{i}/{len(questions)}] {q.id[:8]} {len(checklist.points):>2} points "
-                  f"({checklist.source}) [already built]")
-        elif a.limit is not None and built >= a.limit:
-            print(f"[{i}/{len(questions)}] {q.id[:8]} -- not built yet, --limit "
-                  f"{a.limit} reached this run; re-run to continue")
-            continue
-        else:
-            checklist = build_checklist(q, client)
-            save_checklist(checklist, CHECKLIST_DIR)
-            (review_dir / f"{q.id}.md").write_text(
-                checklist_to_markdown(checklist, q), encoding="utf-8"
-            )
-            built += 1
-            print(f"[{i}/{len(questions)}] {q.id[:8]} {len(checklist.points):>2} points "
-                  f"({checklist.source})")
-        counts.append(len(checklist.points))
-        sources.append(checklist.source)
+    counts, sources, built = run_build(
+        questions, client, CHECKLIST_DIR, review_dir=review_dir,
+        rebuild=a.rebuild, limit=a.limit,
+    )
 
     print(f"\nbuilt {built} this run; {len(counts)}/{len(questions)} checklists on disk")
     if counts:
