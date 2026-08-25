@@ -1841,11 +1841,34 @@ def test_plain_answer_passes_through_with_whitespace_collapsed():
     assert normalise(_result("plain", "The shop  is\n\n\nliable.")) == "The shop is\n\nliable."
 
 
-def test_sectioned_answer_is_flattened_to_prose_without_section_headings():
-    out = normalise(_result("pipeline", "final text", sections={
+def test_final_answer_wins_over_sections_so_content_is_never_doubled():
+    """A recipe carrying both is graded on its final answer, not both.
+
+    CaseFile.to_sections() puts the full prose answer inside the sections dict, so
+    joining the values would give schema-following recipes roughly double Recipe 1's
+    graded content. See the comment in normalise().
+    """
+    out = normalise(_result("pipeline", "The shop is liable.", sections={
+        "issues": "Duty of care.", "conclusion": "Liable.",
+        "final_answer": "The shop is liable."}))
+    assert out == "The shop is liable."
+    assert "Duty of care." not in out
+
+
+def test_sections_are_flattened_when_there_is_no_final_answer():
+    out = normalise(_result("pipeline", "", sections={
         "issues": "Duty of care.", "conclusion": "Liable."}))
     assert "issues" not in out.lower()
     assert "Duty of care." in out and "Liable." in out
+
+
+def test_identical_content_normalises_identically_even_when_one_carries_sections():
+    """The comparison that the doubling bug would have broken."""
+    plain = normalise(_result("plain", "The shop is liable."))
+    pipeline = normalise(_result("pipeline", "The shop is liable.", sections={
+        "issues": "Duty of care.", "rules": "Occupiers owe a duty.",
+        "final_answer": "The shop is liable."}))
+    assert plain == pipeline
 
 
 def test_recipe_name_never_leaks_into_normalised_text():
@@ -1902,10 +1925,23 @@ _SPACE_RUN = re.compile(r"[ \t]{2,}")
 
 
 def normalise(result: RecipeResult) -> str:
-    if result.sections:
+    # `final_answer` first, sections only as a fallback. Every recipe is graded on
+    # the answer an examiner would actually read.
+    #
+    # The reverse precedence is a validity bug, and a scheduled one: CaseFile.to_sections()
+    # puts the full prose answer INSIDE the sections dict alongside issues, rules,
+    # application and conclusion. Joining the values would hand the grader the analysis
+    # AND an answer restating it - roughly double Recipe 1's content volume, for exactly
+    # the recipes under test, awarded by the component whose whole purpose is to stop
+    # recipe-identifying differences reaching the grader.
+    #
+    # The sections fallback still matters: a schema-following recipe whose output fails
+    # to parse sets sections=None and puts raw text in final_answer, so that path already
+    # takes the first branch. The fallback covers a parse that succeeded without a
+    # final_answer.
+    text = (result.final_answer or "").strip()
+    if not text and result.sections:
         text = "\n\n".join(v.strip() for v in result.sections.values() if v and v.strip())
-    else:
-        text = result.final_answer or ""
 
     text = _FENCE.sub("", text)
     text = _SECTION_HEADING.sub("", text)
@@ -2641,7 +2677,12 @@ class StructuredRecipe:
         try:
             case_file = parse_case_file(completion.text, question.id)
             sections = case_file.to_sections()
-            final_answer = case_file.final_answer or sections.get("conclusion", "")
+            # Leave this empty rather than substituting the conclusion. normalise()
+            # prefers a non-empty final_answer and falls back to joining sections, so an
+            # empty value routes a parse-succeeded-but-no-answer result to the sections
+            # join. Substituting the conclusion alone would silently grade the recipe on
+            # a fragment of what it produced.
+            final_answer = case_file.final_answer or ""
         except ValueError:
             metadata["parse_failed"] = True
             sections, final_answer = None, completion.text
