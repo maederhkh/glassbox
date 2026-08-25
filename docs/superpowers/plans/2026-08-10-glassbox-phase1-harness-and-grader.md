@@ -21,6 +21,8 @@
 - Every persisted run records: model, temperature, reasoning effort, prompt hash, dataset revision, seed, timestamp, and full token usage.
 - No unit test may make a network call. Tests use `FakeLLMClient`.
 - Package lives at `src/glassbox/`, installed in editable mode. Scripts in `scripts/` are thin CLI wrappers over library code.
+- **Coverage is computed per question first, then averaged across questions — never pooled over raw points.** Task 7 measured the drafted checklists at a median of 18.5 points per question, range 6–37, because reference answers vary in style. Pooling would weight questions by how descriptive their reference happens to be rather than by legal difficulty. Points within a question are also correlated, so they are a resolution gain, not extra sample size: **the unit of analysis is the question.**
+- **`storage.load_results` globs `*.json` in the run directory, and `grade_runs.py` writes `lexam_scores.json` into that same directory.** A second scoring invocation therefore tries to parse the scorer's own output as a `RecipeResult` and crashes before reaching any validation. Discovered in Task 6, deferred to Task 9, which extends `grade_runs.py` and will run it repeatedly — **Task 9 must fix it**, either by writing scores outside the run directory or by having `load_results` recognise and skip non-result files.
 
 ---
 
