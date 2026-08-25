@@ -143,3 +143,85 @@ def checklist_to_markdown(checklist: Checklist, question: Question) -> str:
     lines += ["", "## Question", "", question.question, "",
               "## Reference answer", "", question.answer, ""]
     return "\n".join(lines)
+
+
+SCORE_PROMPT = """You are marking a law examination answer against a list of points \
+taken from the examiner's reference answer.
+
+For each point, decide:
+  "covered" - the answer makes this point, in substance. Different wording is fine.
+  "partial" - the answer gestures at it but is incomplete or imprecise.
+  "missed"  - the answer does not make this point.
+
+Judge substance, not style or length. A brief answer that makes the point is "covered".
+
+Separately, list:
+  contradictions - statements in the answer that contradict the reference points.
+  inventions     - legal rules, cases, statutes or provisions the answer cites that do \
+not appear in the reference points and that you have reason to doubt.
+
+Return only JSON, in exactly this form:
+{{"verdicts": [{{"point_id": "...", "coverage": "covered|partial|missed", "evidence": "..."}}],
+  "contradictions": ["..."], "inventions": ["..."]}}
+
+### Points
+{points}
+
+### Answer
+{answer}
+"""
+
+_COVERAGE_WEIGHT = {"covered": 1.0, "partial": 0.5, "missed": 0.0}
+
+
+@dataclass(frozen=True)
+class PointVerdict:
+    point_id: str
+    coverage: str
+    evidence: str
+
+
+@dataclass(frozen=True)
+class ChecklistVerdict:
+    question_id: str
+    verdicts: list[PointVerdict]
+    contradictions: list[str]
+    inventions: list[str]
+
+
+def score_checklist(checklist: Checklist, answer_text: str, client) -> ChecklistVerdict:
+    rendered = "\n".join(f"- {p.id}: {p.text}" for p in checklist.points)
+    completion = client.complete(
+        SCORE_PROMPT.format(points=rendered, answer=answer_text)
+    )
+    payload = _extract_json(completion.text)
+
+    returned = {
+        v["point_id"]: v for v in payload.get("verdicts", []) if "point_id" in v
+    }
+    verdicts = []
+    for point in checklist.points:
+        found = returned.get(point.id)
+        coverage = (found or {}).get("coverage", "missed")
+        if coverage not in _COVERAGE_WEIGHT:
+            coverage = "missed"
+        verdicts.append(
+            PointVerdict(
+                point_id=point.id,
+                coverage=coverage,
+                evidence=(found or {}).get("evidence", ""),
+            )
+        )
+
+    return ChecklistVerdict(
+        question_id=checklist.question_id,
+        verdicts=verdicts,
+        contradictions=list(payload.get("contradictions", [])),
+        inventions=list(payload.get("inventions", [])),
+    )
+
+
+def coverage_fraction(verdict: ChecklistVerdict) -> float:
+    if not verdict.verdicts:
+        return 0.0
+    return sum(_COVERAGE_WEIGHT[v.coverage] for v in verdict.verdicts) / len(verdict.verdicts)
