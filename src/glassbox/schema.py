@@ -13,12 +13,18 @@ be scored or traced across stages.
 from __future__ import annotations
 
 import json
-import re
 from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
-_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
+# A model recording an amendment against the section it just wrote under the
+# JSON key `findings` naturally echoes that field name, even though the
+# amendment vocabulary calls that section `application`. Without this alias,
+# that one-word mismatch fails the whole case file - and since self-correction
+# rate is a measured quantity, it preferentially destroys exactly the samples
+# where the pipeline did self-correct.
+_AMENDMENT_SECTION_ALIASES = {"findings": "application"}
+_AMENDMENT_SECTIONS = {"issues", "rules", "application"}
 
 
 class Issue(BaseModel):
@@ -89,18 +95,90 @@ exist", "elements": ["each required element, one per entry"]}],
 "reason": "why"}]}"""
 
 
-def parse_case_file(text: str, question_id: str) -> CaseFile:
-    fenced = _FENCE.search(text or "")
-    payload_text = fenced.group(1) if fenced else (text or "")
-    start, end = payload_text.find("{"), payload_text.rfind("}")
-    if start == -1 or end == -1:
-        raise ValueError(f"no JSON object found in model output: {(text or '')[:200]!r}")
+def _balanced_json_objects(text: str) -> list[str]:
+    """Every balanced top-level `{...}` span in `text`, in order of appearance.
 
-    payload = json.loads(payload_text[start : end + 1])
+    String-aware, so a brace inside a quoted value never mis-counts depth.
+    Markdown code fences need no special handling: their backticks just sit
+    outside any `{}` span and are skipped like any other prose character.
+    """
+    spans: list[str] = []
+    depth = 0
+    start = None
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                spans.append(text[start : i + 1])
+                start = None
+    return spans
+
+
+def _extract_payload(text: str) -> dict:
+    """Pick the case-file JSON object out of raw model output.
+
+    Prefers the *last* balanced object: a model that drafts then corrects
+    itself, or echoes an example before the real payload, leaves the good
+    object last. Earlier candidates are only a fallback for when the last
+    balanced span is not valid JSON on its own (e.g. an incidental brace pair
+    in prose, `"{...}"`, that closes before the real payload even starts).
+    """
+    candidates = _balanced_json_objects(text)
+    last_error: json.JSONDecodeError | None = None
+    for candidate in reversed(candidates):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+    if last_error is not None:
+        raise ValueError(
+            f"could not parse any JSON object found in model output: {last_error}"
+        ) from last_error
+    raise ValueError(f"no JSON object found in model output: {text[:200]!r}")
+
+
+def _normalise_amendments(raw: object) -> list[dict]:
+    """Recover amendments recorded under an off-vocabulary section label,
+    rather than failing the entire case file over one field.
+
+    An unrecognised label drops just that one amendment; the rest of the case
+    file - and every other amendment - survives.
+    """
+    cleaned: list[dict] = []
+    for amendment in raw or []:
+        if not isinstance(amendment, dict):
+            continue
+        section = amendment.get("section")
+        section = _AMENDMENT_SECTION_ALIASES.get(section, section)
+        if section not in _AMENDMENT_SECTIONS:
+            continue
+        cleaned.append({**amendment, "section": section})
+    return cleaned
+
+
+def parse_case_file(text: str, question_id: str) -> CaseFile:
+    payload = _extract_payload(text or "")
     payload["question_id"] = question_id
     for key in ("issues", "rules", "findings"):
         if key in payload and not payload[key]:
             payload[key] = None
+    payload["amendments"] = _normalise_amendments(payload.get("amendments"))
     try:
         return CaseFile(**payload)
     except ValidationError as exc:
