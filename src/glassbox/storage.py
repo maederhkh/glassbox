@@ -18,6 +18,10 @@ def save_result(result: RecipeResult, run_dir: Path) -> Path:
     return path
 
 
+def result_path(recipe_name: str, question_id: str, run_dir: Path) -> Path:
+    return Path(run_dir) / f"{recipe_name}__{question_id}.json"
+
+
 def _to_result(payload: dict) -> RecipeResult:
     return RecipeResult(
         recipe=payload["recipe"],
@@ -53,6 +57,13 @@ _RESULT_KEYS = frozenset(
 
 def _is_result_payload(payload: object) -> bool:
     return isinstance(payload, dict) and _RESULT_KEYS.issubset(payload.keys())
+
+
+def load_result(path: Path) -> RecipeResult:
+    """A single previously-saved result, e.g. to check what a resumed run
+    already has on disk without re-scanning the whole run directory."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return _to_result(payload)
 
 
 def load_results(run_dir: Path) -> list[RecipeResult]:
