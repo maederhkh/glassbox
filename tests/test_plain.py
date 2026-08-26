@@ -50,3 +50,10 @@ def test_prompt_contains_question_and_course_but_not_reference_answer():
 def test_usage_is_recorded():
     result = PlainRecipe().run(QUESTION, FakeLLMClient(["answer"]))
     assert result.usage.calls == 1
+
+
+def test_metadata_carries_a_prompt_hash_and_timestamp():
+    a = PlainRecipe().run(QUESTION, FakeLLMClient(["answer"]))
+    b = PlainRecipe().run(QUESTION, FakeLLMClient(["a different answer"]))
+    assert a.metadata["prompt_hash"] == b.metadata["prompt_hash"]
+    assert isinstance(a.metadata["timestamp"], str) and a.metadata["timestamp"]

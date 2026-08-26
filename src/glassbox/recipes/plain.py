@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 
 from glassbox.dataset import Question
-from glassbox.recipes.base import RecipeResult
+from glassbox.recipes.base import RecipeResult, prompt_fingerprint
 
 PLAIN_SYSTEM = (
     "You are an expert in {course}, answering a university law examination "
@@ -29,6 +30,11 @@ Question:
 
 Answer:"""
 
+# Computed once at import time over the fixed templates only (course/question
+# placeholders left unrendered) -- see prompt_fingerprint's docstring. Constant
+# across every question and every PlainRecipe call.
+PROMPT_HASH = prompt_fingerprint(PLAIN_SYSTEM, PLAIN_PROMPT)
+
 
 class PlainRecipe:
     name = "plain"
@@ -51,5 +57,7 @@ class PlainRecipe:
                 "model": completion.model,
                 "temperature": getattr(client, "temperature", None),
                 "reasoning_effort": getattr(client, "reasoning_effort", None),
+                "prompt_hash": PROMPT_HASH,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
