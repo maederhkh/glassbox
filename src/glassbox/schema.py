@@ -92,7 +92,20 @@ exist", "elements": ["each required element, one per entry"]}],
  "conclusion": "the overall conclusion",
  "final_answer": "the full exam-style answer, written out in prose",
  "amendments": [{"section": "issues|rules|application", "change": "what you changed", \
-"reason": "why"}]}"""
+"reason": "why"}]}
+
+Every "holds" value must be exactly one of the three literal words yes, no, or \
+uncertain - nothing else. Never write a qualifier, parenthetical, or combination \
+such as "partially", "yes (as to X)", "not applicable", or "no/uncertain": put any \
+such nuance in "reasoning" instead, and choose "uncertain" whenever the element does \
+not hold cleanly as yes or no. If an element has multiple parts that could get \
+different answers, do not pack more than one answer into a single "holds" value \
+(e.g. never write "a1: yes; a2: uncertain") - either give the element one overall \
+answer (uncertain if the parts disagree) or split it into separate "findings" \
+entries, each naming one sub-part in "element" and carrying its own single "holds".
+
+Every entry in "rules" must include a non-empty "elements" array, even when the \
+rule has only one element - never omit this field."""
 
 
 def _balanced_json_objects(text: str) -> list[str]:

@@ -8,10 +8,15 @@ from glassbox.config import EFFORT_BASELINE, RUNS_DIR, SYSTEM_MODEL, SYSTEM_TEMP
 from glassbox.dataset import load_sample
 from glassbox.llm import LLMClient
 from glassbox.recipes.plain import PlainRecipe
+from glassbox.recipes.structured import StructuredRecipe, ThinkLongerRecipe
 from glassbox.runner import run_recipe
 from glassbox.usage import Usage, cost_usd
 
-RECIPES = {"plain": PlainRecipe}
+RECIPES = {
+    "plain": PlainRecipe,
+    "structured": StructuredRecipe,
+    "think_longer": ThinkLongerRecipe,
+}
 
 
 def main() -> None:
