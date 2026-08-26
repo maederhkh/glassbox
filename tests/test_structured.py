@@ -91,3 +91,25 @@ def test_metadata_carries_a_non_empty_timestamp():
     result = StructuredRecipe().run(QUESTION, FakeLLMClient([PAYLOAD]))
     assert isinstance(result.metadata["timestamp"], str)
     assert result.metadata["timestamp"]
+
+
+PAYLOAD_MISSING_FINAL_ANSWER = """{"issues": [{"id": "i1", "statement": "Duty owed?", "why_it_arises": "customer"}],
+ "rules": [{"issue_id": "i1", "rule": "Occupiers owe a duty.", "elements": ["occupier"]}],
+ "findings": [{"issue_id": "i1", "element": "occupier", "holds": "yes", "reasoning": "controls"}],
+ "conclusion": "Liable.",
+ "amendments": []}"""
+
+
+def test_missing_final_answer_is_left_empty_not_backfilled_from_conclusion():
+    # CaseFile.final_answer is `str | None = None`, so a payload that parses
+    # successfully but omits the field entirely is a real, reachable case, not
+    # a hypothetical -- this exercises it directly. normalise() prefers a
+    # non-empty final_answer and falls back to joining sections; silently
+    # substituting the conclusion here would grade the recipe on a one-line
+    # fragment of what it actually produced instead of routing to that
+    # sections-join fallback.
+    result = StructuredRecipe().run(QUESTION, FakeLLMClient([PAYLOAD_MISSING_FINAL_ANSWER]))
+    assert result.metadata["parse_failed"] is False
+    assert result.final_answer == ""
+    assert result.sections.get("conclusion") == "Liable."
+    assert "final_answer" not in result.sections

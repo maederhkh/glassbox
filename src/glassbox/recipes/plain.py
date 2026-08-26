@@ -38,6 +38,11 @@ PROMPT_HASH = prompt_fingerprint(PLAIN_SYSTEM, PLAIN_PROMPT)
 
 class PlainRecipe:
     name = "plain"
+    # Exposed as a class attribute (not just used as a module-level constant
+    # below) so runner.py's skip-existing resume can compare a stored
+    # result's recorded prompt_hash against "this recipe's prompt, right
+    # now" via getattr(recipe, "PROMPT_HASH", None).
+    PROMPT_HASH = PROMPT_HASH
 
     def run(self, question: Question, client) -> RecipeResult:
         started = time.monotonic()

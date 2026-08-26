@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 
 from glassbox.recipes.base import RecipeResult
 from glassbox.storage import load_results, save_result
@@ -16,6 +18,33 @@ def test_round_trips_a_result(tmp_path):
     loaded = load_results(tmp_path)
     assert len(loaded) == 1
     assert loaded[0] == RESULT
+
+
+def test_save_result_publishes_via_a_temp_file_and_os_replace(tmp_path, monkeypatch):
+    # A plain write_text leaves a truncated, unparseable file in place if the
+    # process is killed mid-write -- the project's documented failure mode
+    # (six runs lost to it). Writing to a temp file first and swapping it in
+    # with os.replace (atomic on both POSIX and Windows) means a kill before
+    # the replace leaves either the previous complete file or nothing at the
+    # destination path -- never a partial one. Spy on os.replace (rather than
+    # blocking it) so the real call still runs and the file actually lands.
+    calls = []
+    real_replace = os.replace
+
+    def spy_replace(src, dst):
+        calls.append((Path(src), Path(dst)))
+        real_replace(src, dst)
+
+    monkeypatch.setattr("glassbox.storage.os.replace", spy_replace)
+
+    path = save_result(RESULT, tmp_path)
+
+    assert calls, "save_result must publish via os.replace, not a direct write_text"
+    tmp_src, dst = calls[0]
+    assert dst == path
+    assert tmp_src != path, "must write to a different temp path first"
+    assert not tmp_src.exists(), "os.replace should have moved the temp file away"
+    assert json.loads(path.read_text(encoding="utf-8"))["recipe"] == "plain"
 
 
 def test_filename_includes_recipe_and_question_id(tmp_path):

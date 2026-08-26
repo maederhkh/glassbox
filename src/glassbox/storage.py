@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from pathlib import Path
 
@@ -11,10 +12,22 @@ from glassbox.usage import Usage
 
 
 def save_result(result: RecipeResult, run_dir: Path) -> Path:
+    """Write ``result`` to ``run_dir`` as JSON, atomically.
+
+    A plain ``write_text`` leaves a truncated, unparseable file in place if
+    the process is killed mid-write -- the project's documented failure mode
+    (six runs lost to it). Writing to a temp file in the same directory first
+    and swapping it in with ``os.replace`` (atomic on both POSIX and Windows)
+    means a kill leaves either the previous complete file or the new complete
+    file at ``path`` -- never something in between. Same pattern as
+    ``scripts/grade_runs.py``'s ``_write_scores``.
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     path = run_dir / f"{result.recipe}__{result.question_id}.json"
-    path.write_text(json.dumps(asdict(result), indent=2, ensure_ascii=False),
-                    encoding="utf-8")
+    tmp_path = path.with_name(path.name + ".tmp")
+    tmp_path.write_text(json.dumps(asdict(result), indent=2, ensure_ascii=False),
+                         encoding="utf-8")
+    os.replace(tmp_path, path)
     return path
 
 
