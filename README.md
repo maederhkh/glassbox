@@ -3,7 +3,7 @@
 **Does breaking legal reasoning into explicit steps actually make it better?**
 
 Single-pass generation is a black box: when the reasoning fails, you cannot see where.
-A staged pipeline is a glass box — every intermediate step is inspectable. This project
+A staged pipeline is a glass box every intermediate step is inspectable. This project
 is a controlled study of whether that transparency buys any real gain in quality,
 reliability, or error recovery, and what it costs.
 
