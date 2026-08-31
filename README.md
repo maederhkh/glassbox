@@ -84,12 +84,12 @@ Building the grader before the pipeline was a deliberate choice, and it paid for
 
 - **The official LEXam grader saturates.** It scored the model 0.85 and the *experts' own
   answers* 0.89, with 19 of 20 answers landing on just two values. It cannot separate good
-  from excellent, so the point-level checklist — which produced 18 distinct values across
-  20 answers — carries the study instead.
+  from excellent, so the point-level checklist which produced 18 distinct values across
+  20 answers carries the study instead.
 - **One LEXam question has the wrong answer attached.** `0f6dd9e7` asks about Art. 101
   TFEU; its reference answer analyses Art. 102 and a different fact pattern. Replaced, and
   recorded in the manifest.
-- **Temperature is silently ignored** by `gpt-5-mini` — passing it does not error. Stability
+- **Temperature is silently ignored** by `gpt-5-mini` passing it does not error. Stability
   is therefore measured under the model's default sampling, and the write-up must say so.
 - **The blinding was leaking.** The formatting stripper missed the em dash the model
   actually writes, so 15 of 20 Recipe 3 answers were reaching the grader still wearing
@@ -103,7 +103,7 @@ Building the grader before the pipeline was a deliberate choice, and it paid for
 | 2 · Structured | 129,270 | $0.23 |
 | 3 · Think longer | 439,382 | $0.85 |
 
-Recipe 3 spends **3.4×** Recipe 2 on an identical prompt — almost entirely in hidden
+Recipe 3 spends **3.4×** Recipe 2 on an identical prompt almost entirely in hidden
 reasoning rather than longer answers, so answer length does not become a confound.
 
 ---
