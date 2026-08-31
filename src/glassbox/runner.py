@@ -57,6 +57,7 @@ def run_recipe(recipe, questions: list[Question], client, run_dir: Path,
                 result = None
             else:
                 _check_prompt_hash(recipe, question, result, path, run_dir)
+                _check_reasoning_effort(client, question, result, path, run_dir)
 
         if result is not None:
             if verbose:
@@ -101,5 +102,36 @@ def _check_prompt_hash(recipe, question: Question, result: RecipeResult,
             f"prompt_hash {stored_hash!r}, but {recipe.name!r}'s current "
             f"prompt_hash is {current_hash!r}. Resuming would silently mix "
             f"prompt versions in {run_dir}. Delete the run directory and "
+            f"re-run, or pass --rerun."
+        )
+
+
+def _check_reasoning_effort(client, question: Question, result: RecipeResult,
+                            path: Path, run_dir: Path) -> None:
+    """Refuse to resume a result recorded under a different reasoning effort.
+
+    The same contamination class ``_check_prompt_hash`` guards against, on the
+    other manipulated variable. Recipe 3 (``think_longer``) is identical to
+    Recipe 2 except for a raised reasoning effort, and the two share a prompt
+    hash by design -- so the hash check cannot see an effort mismatch. Resuming
+    a partial ``think_longer`` run at the default effort would silently mix
+    effort levels inside one experimental arm, which is exactly the kind of
+    difference the study is trying to measure.
+
+    Skips the comparison (rather than crashing) when either side has no
+    recorded effort, matching the tolerance the hash check gives pre-field
+    results.
+    """
+    current_effort = getattr(client, "reasoning_effort", None)
+    stored_effort = result.metadata.get("reasoning_effort")
+    if current_effort is None or stored_effort is None:
+        return
+    if current_effort != stored_effort:
+        raise RuntimeError(
+            f"refusing to resume {question.id!r}: {path} was produced with "
+            f"reasoning_effort {stored_effort!r}, but this run is using "
+            f"{current_effort!r}. Resuming would silently mix effort levels in "
+            f"{run_dir}, and effort is the only thing separating "
+            f"think_longer from structured. Delete the run directory and "
             f"re-run, or pass --rerun."
         )

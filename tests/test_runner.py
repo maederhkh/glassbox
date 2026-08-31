@@ -155,6 +155,60 @@ def test_skips_hash_check_when_the_stored_result_predates_the_prompt_hash_field(
     assert results[0].final_answer == "legacy answer"
 
 
+def test_refuses_to_resume_when_stored_reasoning_effort_differs_from_the_current_run(
+    tmp_path,
+):
+    # The same contamination class the prompt_hash check guards against, but on
+    # the other manipulated variable: Recipe 3 (think_longer) is identical to
+    # Recipe 2 except for a raised reasoning effort, so resuming a partial
+    # think_longer run at the wrong effort would silently mix effort levels
+    # within one arm. Must refuse outright, not warn.
+    stale = PlainRecipe().run(QUESTION_A, FakeLLMClient(["old answer"], reasoning_effort="low"))
+    save_result(stale, tmp_path)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        run_recipe(PlainRecipe(), [QUESTION_A], FakeLLMClient([], reasoning_effort="high"), tmp_path)
+
+    message = str(exc_info.value)
+    assert QUESTION_A.id in message
+    assert "low" in message
+    assert "high" in message
+
+
+def test_resumes_normally_when_stored_and_current_reasoning_effort_match(tmp_path):
+    stale = PlainRecipe().run(QUESTION_A, FakeLLMClient(["old answer"], reasoning_effort="high"))
+    save_result(stale, tmp_path)
+
+    results = run_recipe(
+        PlainRecipe(), [QUESTION_A], FakeLLMClient([], reasoning_effort="high"), tmp_path
+    )
+    assert results[0].final_answer == "old answer"
+
+
+def test_skips_reasoning_effort_check_when_the_current_client_reports_no_effort(tmp_path):
+    # FakeLLMClient defaults reasoning_effort to None, mirroring a client that
+    # doesn't report effort at all -- must not crash, and must not refuse.
+    stale = PlainRecipe().run(QUESTION_A, FakeLLMClient(["old answer"], reasoning_effort="high"))
+    save_result(stale, tmp_path)
+
+    results = run_recipe(PlainRecipe(), [QUESTION_A], FakeLLMClient([]), tmp_path)
+    assert results[0].final_answer == "old answer"
+
+
+def test_skips_reasoning_effort_check_when_the_stored_result_predates_the_field(tmp_path):
+    # Older results may predate the reasoning_effort field entirely (the same
+    # tolerance prompt_hash's check already gives pre-field results).
+    legacy = PlainRecipe().run(QUESTION_A, FakeLLMClient(["legacy answer"], reasoning_effort="high"))
+    legacy_metadata = {k: v for k, v in legacy.metadata.items() if k != "reasoning_effort"}
+    legacy = dataclasses.replace(legacy, metadata=legacy_metadata)
+    save_result(legacy, tmp_path)
+
+    results = run_recipe(
+        PlainRecipe(), [QUESTION_A], FakeLLMClient([], reasoning_effort="low"), tmp_path
+    )
+    assert results[0].final_answer == "legacy answer"
+
+
 def test_dataset_revision_and_seed_are_not_backfilled_onto_a_skipped_result(tmp_path):
     existing = PlainRecipe().run(QUESTION_A, FakeLLMClient(["first answer"]))
     save_result(existing, tmp_path)

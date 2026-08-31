@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 
-from glassbox.config import EFFORT_BASELINE, RUNS_DIR, SYSTEM_MODEL, SYSTEM_TEMPERATURE
+from glassbox.config import (
+    EFFORT_BASELINE, EFFORT_RAISED, RUNS_DIR, SYSTEM_MODEL, SYSTEM_TEMPERATURE,
+)
 from glassbox.dataset import load_manifest, load_sample
 from glassbox.llm import LLMClient
 from glassbox.recipes.plain import PlainRecipe
@@ -18,12 +20,47 @@ RECIPES = {
     "think_longer": ThinkLongerRecipe,
 }
 
+# Recipe 3's only difference from Recipe 2 is the raised reasoning effort, so
+# the right effort is the recipe's default rather than something an operator
+# must remember to pass. Running think_longer at the baseline would silently
+# produce Recipe 2 wearing Recipe 3's label.
+DEFAULT_EFFORT = {
+    "plain": EFFORT_BASELINE,
+    "structured": EFFORT_BASELINE,
+    "think_longer": EFFORT_RAISED,
+}
+VALID_EFFORTS = (EFFORT_BASELINE, EFFORT_RAISED)
+
+
+def resolve_effort(recipe_name: str, explicit: str | None) -> str:
+    """The effort a run should use: the recipe's default, or an explicit override.
+
+    Rejects an unrecognised value here, before ``main()`` constructs a client,
+    so a typo cannot reach the API and burn the client's retries against it.
+    """
+    if recipe_name not in DEFAULT_EFFORT:
+        raise SystemExit(
+            f"no default reasoning effort recorded for recipe {recipe_name!r}; "
+            f"add one to DEFAULT_EFFORT rather than letting it fall back silently"
+        )
+    effort = DEFAULT_EFFORT[recipe_name] if explicit is None else explicit
+    if effort not in VALID_EFFORTS:
+        raise SystemExit(
+            f"unrecognised --effort {effort!r}; expected one of "
+            f"{', '.join(repr(e) for e in VALID_EFFORTS)}"
+        )
+    return effort
+
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--recipe", required=True, choices=sorted(RECIPES))
     p.add_argument("--questions", default="dev_20")
-    p.add_argument("--effort", default=EFFORT_BASELINE)
+    p.add_argument(
+        "--effort", default=None,
+        help="override the recipe's default reasoning effort "
+             f"(plain/structured: {EFFORT_BASELINE}, think_longer: {EFFORT_RAISED})",
+    )
     p.add_argument("--tag", default="", help="suffix for the output directory")
     p.add_argument(
         "--only",
@@ -40,6 +77,7 @@ def main() -> None:
     )
     a = p.parse_args()
 
+    effort = resolve_effort(a.recipe, a.effort)
     questions = load_sample(a.questions)
     manifest = load_manifest(a.questions)
     if a.only:
@@ -47,7 +85,7 @@ def main() -> None:
         if not questions:
             raise SystemExit(f"{a.only!r} not found in sample {a.questions!r}")
     client = LLMClient(model=SYSTEM_MODEL, temperature=SYSTEM_TEMPERATURE,
-                       reasoning_effort=a.effort)
+                       reasoning_effort=effort)
     run_dir = RUNS_DIR / f"{a.questions}__{a.recipe}{a.tag}"
 
     print(f"{a.recipe} over {len(questions)} questions -> {run_dir}\n")
