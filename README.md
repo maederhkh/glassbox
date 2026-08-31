@@ -73,8 +73,8 @@ has not been run.**
 
 138 tests, none of which call a model.
 
-Everything Phase 1 measured — including several findings that contradicted the original
-design — is written up in **[`docs/phase1-outcomes.md`](docs/phase1-outcomes.md)**.
+Everything Phase 1 measured including several findings that contradicted the original
+design is written up in **[`docs/phase1-outcomes.md`](docs/phase1-outcomes.md)**.
 
 ---
 
