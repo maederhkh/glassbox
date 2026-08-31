@@ -112,14 +112,14 @@ reasoning rather than longer answers, so answer length does not become a confoun
 
 | Path | What |
 |---|---|
-| [`src/glassbox/recipes/`](src/glassbox/recipes/) | The recipes and their prompts — the experiment itself |
+| [`src/glassbox/recipes/`](src/glassbox/recipes/) | The recipes and their prompts the experiment itself |
 | [`src/glassbox/grading/`](src/glassbox/grading/) | Blinding, LEXam's judges, checklist scoring |
 | [`src/glassbox/`](src/glassbox/) | Model client, cost metering, dataset, storage, runner |
 | [`scripts/`](scripts/) | The commands you actually run |
 | [`tests/`](tests/) | 138 offline checks |
 | [`docs/`](docs/) | Design spec, implementation plan, Phase 1 outcomes |
 
-Question text, checklists and generated answers stay out of version control — LEXam's
+Question text, checklists and generated answers stay out of version control LEXam's
 content is not redistributed here. Only question IDs and metadata are committed.
 
 ## Running it
@@ -143,11 +143,11 @@ than re-spending.
 
 - **Dataset** — [LEXam](https://lexam-benchmark.github.io/), English open questions, filtered
   to those requiring applied legal reasoning
-- **System model** — `openai/gpt-5-mini`, the same model for every recipe and every stage,
+- **System model**: `openai/gpt-5-mini`, the same model for every recipe and every stage,
   so the manipulation is structure rather than capability
-- **Graders** — LEXam's published three-judge ensemble (`gpt-4o`, `deepseek-chat`,
+- **Graders**: LEXam's published three-judge ensemble (`gpt-4o`, `deepseek-chat`,
   `qwen3-32b`), scored as the minimum
-- **Provider** — all calls via OpenRouter
+- **Provider**: all calls via OpenRouter
 
 ## Related work
 
