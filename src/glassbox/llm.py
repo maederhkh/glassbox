@@ -11,12 +11,28 @@ import time
 from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from glassbox.config import (
     MAX_ATTEMPTS, OPENROUTER_BASE_URL, SYSTEM_MODEL, SYSTEM_TEMPERATURE,
 )
 from glassbox.usage import Usage
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Whether a failed API call can succeed on a later attempt.
+
+    Connection failures, timeouts, rate limits and server-side errors can.
+    Client-side errors (out of credit, bad key, malformed request) cannot,
+    and retrying one turns a clear failure into a stalled batch.
+    """
+    import openai
+
+    if isinstance(exc, (openai.APIConnectionError, openai.RateLimitError)):
+        return True
+    if isinstance(exc, openai.APIStatusError):
+        return exc.status_code >= 500
+    return False
 
 
 @dataclass(frozen=True)
@@ -45,7 +61,8 @@ class LLMClient:
             api_key=os.environ["OPENROUTER_API_KEY"],
         )
 
-    @retry(stop=stop_after_attempt(MAX_ATTEMPTS),
+    @retry(retry=retry_if_exception(_is_retryable),
+           stop=stop_after_attempt(MAX_ATTEMPTS),
            wait=wait_exponential(multiplier=2, min=2, max=60))
     def _call(self, messages: list[dict[str, str]]):
         kwargs: dict = {"model": self.model, "messages": messages}
