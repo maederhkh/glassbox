@@ -90,7 +90,7 @@ Building the grader before the pipeline was a deliberate choice, and it paid for
   TFEU; its reference answer analyses Art. 102 and a different fact pattern. Replaced, and
   recorded in the manifest.
 - **Temperature is silently ignored** by `gpt-5-mini` passing it does not error. Stability
-  is therefore measured under the model's default sampling, and the write-up must say so.
+  is therefore measured under the model's default sampling, and the write up must say so.
 - **The blinding was leaking.** The formatting stripper missed the em dash the model
   actually writes, so 15 of 20 Recipe 3 answers were reaching the grader still wearing
   their step headings. Fixed; now zero across all 60.
