@@ -75,3 +75,44 @@ def test_load_results_skips_grader_output_written_into_the_same_directory(tmp_pa
     loaded = load_results(tmp_path)
     assert len(loaded) == 1
     assert loaded[0] == RESULT
+
+
+# --- A pipeline result carries four StageRecords -------------------------
+
+def test_a_result_with_stages_round_trips_exactly(tmp_path):
+    """Until the pipeline existed, every saved result had stages=[].
+
+    A pipeline result carries one StageRecord per call, each with its own
+    prompt, output and usage. If that does not survive a save/load cycle, the
+    first live run writes files nothing can read back -- and per-stage cost and
+    error attribution, which is what the pipeline is for, would be lost.
+    """
+    from glassbox.dataset import Question
+    from glassbox.llm import FakeLLMClient
+    from glassbox.recipes.pipeline import PipelineRecipe
+    import tests.test_pipeline as fixtures
+
+    question = Question(
+        id="q-stages", question="Is the clause valid?", answer="reference text",
+        course="European Economic Law", area="Public", jurisdiction="International",
+        year="2022", question_words=60, answer_words=200,
+    )
+    original = PipelineRecipe().run(
+        question, FakeLLMClient(fixtures.FOUR_STAGE_RESPONSES)
+    )
+    assert len(original.stages) == 4
+
+    save_result(original, tmp_path)
+    loaded = load_results(tmp_path)[0]
+
+    assert loaded == original
+    assert [s.name for s in loaded.stages] == [
+        "issues", "rules", "application", "conclusion",
+    ]
+    # Per-stage usage is what makes per-stage cost attribution possible.
+    assert [s.usage.calls for s in loaded.stages] == [1, 1, 1, 1]
+    assert loaded.stages[0].prompt == original.stages[0].prompt
+    assert loaded.stages[3].output == original.stages[3].output
+    # The measurements Day 4 added must survive too.
+    assert loaded.metadata["stage_violations"] == []
+    assert loaded.metadata["amendments"] == []

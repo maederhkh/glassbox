@@ -9,6 +9,7 @@ from glassbox.config import (
 )
 from glassbox.dataset import load_manifest, load_sample
 from glassbox.llm import LLMClient
+from glassbox.recipes.pipeline import PipelineRecipe
 from glassbox.recipes.plain import PlainRecipe
 from glassbox.recipes.structured import StructuredRecipe, ThinkLongerRecipe
 from glassbox.runner import run_recipe
@@ -18,6 +19,7 @@ RECIPES = {
     "plain": PlainRecipe,
     "structured": StructuredRecipe,
     "think_longer": ThinkLongerRecipe,
+    "pipeline": PipelineRecipe,
 }
 
 # Recipe 3's only difference from Recipe 2 is the raised reasoning effort, so
@@ -28,6 +30,9 @@ DEFAULT_EFFORT = {
     "plain": EFFORT_BASELINE,
     "structured": EFFORT_BASELINE,
     "think_longer": EFFORT_RAISED,
+    # Four calls, not harder thinking per call. Raised effort is Recipe 3's
+    # manipulation and only Recipe 3's.
+    "pipeline": EFFORT_BASELINE,
 }
 VALID_EFFORTS = (EFFORT_BASELINE, EFFORT_RAISED)
 

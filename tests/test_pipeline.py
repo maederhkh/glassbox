@@ -106,15 +106,6 @@ def test_a_later_stage_does_not_receive_the_raw_text_of_an_earlier_one():
 def test_unparseable_stage_output_is_reported_not_swallowed():
     with pytest.raises(ValueError):
         PipelineRecipe(stages=(STAGE_ISSUES,)).run(QUESTION, FakeLLMClient(["not json at all"]))
-
-
-def test_the_pipeline_is_not_registered_as_a_runnable_recipe_yet():
-    # Stages 2-4 do not exist. A one-stage result in a run directory would be
-    # graded as though it were a pipeline answer.
-    from scripts.run_recipe import RECIPES
-    assert "pipeline" not in RECIPES
-
-
 # --- Day 3: Stages 2 and 3 -------------------------------------------------
 
 RULES_JSON = (
@@ -323,3 +314,32 @@ def test_amendments_are_recorded_so_self_correction_can_be_counted():
          "change": "added the block exemption",
          "reason": "the original rule statement was incomplete"}
     ]
+
+
+# --- Day 5: registration and readiness ------------------------------------
+
+def test_the_pipeline_is_registered_as_a_runnable_recipe():
+    # All four stages exist, so a result is a complete pipeline answer rather
+    # than a partial one that would be graded as though it were complete.
+    from scripts.run_recipe import RECIPES
+    assert RECIPES["pipeline"] is PipelineRecipe
+
+
+def test_the_pipeline_defaults_to_baseline_effort():
+    # Its extra compute comes from making four calls, not from thinking harder
+    # per call. Raised effort is Recipe 3's manipulation and only Recipe 3's.
+    from glassbox.config import EFFORT_BASELINE
+    from scripts.run_recipe import resolve_effort
+    assert resolve_effort("pipeline", None) == EFFORT_BASELINE
+
+
+def test_a_pipeline_answer_is_graded_on_its_final_answer_only():
+    # The doubling guard, on the recipe it was written for. sections carries
+    # the analysis AND the final answer, so joining them would hand the grader
+    # roughly twice what Recipe 1 gets.
+    from glassbox.grading.normalise import normalise
+    result = PipelineRecipe().run(QUESTION, FakeLLMClient(FOUR_STAGE_RESPONSES))
+    blinded = normalise(result)
+    assert "void under Article 101(2) TFEU" in blinded
+    assert "an agreement between undertakings" not in blinded
+    assert "pipeline" not in blinded.lower()
