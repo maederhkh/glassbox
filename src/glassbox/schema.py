@@ -118,6 +118,16 @@ Every "holds" value must be exactly one of the three literal words yes, no, or u
 
 Return the "findings" array and nothing else. Do not state the overall answer to the question: the final stage does that."""
 
+def stage_conclusion_json_instructions() -> str:
+    """The JSON shape Stage 4 returns: the conclusion and the written answer."""
+    return """Return only JSON, in exactly this form. Every value is natural-language legal writing, not keywords:
+
+{"conclusion": "the overall conclusion", "final_answer": "the full exam-style answer, written out in prose"}
+
+Base the conclusion on the findings above. Where a finding is "uncertain", say so rather than resolving it silently.
+
+"final_answer" is what an examiner reads: a complete exam answer in prose, covering the issues, the rules and their application, not a summary of the sections above and not a restatement of this JSON."""
+
 def case_file_json_instructions() -> str:
     return """Return only JSON, in exactly this form. Every value is natural-language \
 legal writing, not keywords:
