@@ -28,8 +28,14 @@ from datetime import datetime, timezone
 
 from glassbox.dataset import Question
 from glassbox.recipes.base import RecipeResult, StageRecord, prompt_fingerprint
-from glassbox.recipes.steps import STEP_ISSUES
-from glassbox.schema import parse_case_file, stage_issues_json_instructions
+from glassbox.recipes.steps import STEP_APPLICATION, STEP_ISSUES, STEP_RULES
+from glassbox.schema import (
+    CaseFile,
+    parse_case_file,
+    stage_application_json_instructions,
+    stage_issues_json_instructions,
+    stage_rules_json_instructions,
+)
 
 PIPELINE_SYSTEM = (
     "You are an expert in {course}, answering a university law examination "
@@ -58,6 +64,22 @@ STAGE_ISSUES = Stage(
     section="issues",
 )
 
+STAGE_RULES = Stage(
+    name="rules",
+    instruction=STEP_RULES,
+    json_instructions=stage_rules_json_instructions(),
+    section="rules",
+)
+
+# Fills CaseFile.findings, which to_sections() renders under "application" --
+# the stage is named for what it does, the section for what the grader reads.
+STAGE_APPLICATION = Stage(
+    name="application",
+    instruction=STEP_APPLICATION,
+    json_instructions=stage_application_json_instructions(),
+    section="application",
+)
+
 
 def build_stage_prompt(stage: Stage, question: Question, committed: dict[str, str]) -> str:
     """The facts, then whatever earlier stages committed, then this stage's step."""
@@ -78,7 +100,7 @@ def build_stage_prompt(stage: Stage, question: Question, committed: dict[str, st
 
 class PipelineRecipe:
     name = "pipeline"
-    STAGES = (STAGE_ISSUES,)
+    STAGES = (STAGE_ISSUES, STAGE_RULES, STAGE_APPLICATION)
 
     #: Covers every stage's instruction and JSON shape, so tightening any one of
     #: them changes the hash on every result produced afterwards, exactly as it
@@ -117,10 +139,12 @@ class PipelineRecipe:
             # Raises on unparseable output rather than degrading quietly: a
             # stage that produced nothing usable makes every later stage's
             # input wrong, and a half-run saved to disk is worse than none.
-            case_file = parse_case_file(completion.text, question.id)
-            rendered = case_file.to_sections()
-            if stage.section in rendered:
-                committed[stage.section] = rendered[stage.section]
+            parsed = parse_case_file(completion.text, question.id)
+            case_file = _merge(case_file, parsed, question.id)
+            # The accumulated case file is the single source the relay reads
+            # from (spec 6.2). Keeping a second parallel accumulator would let
+            # the two disagree, and would make the merge above unobservable.
+            committed = case_file.to_sections()
 
         total = records[0].usage
         for record in records[1:]:
@@ -146,3 +170,21 @@ class PipelineRecipe:
                 "stages_run": [s.name for s in self.stages],
             },
         )
+
+
+def _merge(accumulated: CaseFile | None, parsed: CaseFile, question_id: str) -> CaseFile:
+    """Fold a stage's output into the case file built so far.
+
+    Each stage returns only its own section, so replacing the case file with the
+    latest parse would silently discard every earlier stage. A stage may also
+    amend an earlier section (spec 6.4), so a non-empty value from the newer
+    parse wins; empty ones leave what is already there.
+    """
+    if accumulated is None:
+        return parsed
+    merged = accumulated.model_dump()
+    for field, value in parsed.model_dump().items():
+        if value:
+            merged[field] = value
+    merged["question_id"] = question_id
+    return CaseFile(**merged)

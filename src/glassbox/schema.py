@@ -95,6 +95,29 @@ def stage_issues_json_instructions() -> str:
 
 Return the "issues" array and nothing else. Do not name any rule, do not apply anything to the facts, and do not reach a conclusion: later stages do that. Identifying an issue is not the same as answering it."""
 
+def stage_rules_json_instructions() -> str:
+    """The JSON shape Stage 2 returns: the governing rules and their elements."""
+    return """Return only JSON, in exactly this form. Every value is natural-language legal writing, not keywords:
+
+{"rules": [{"issue_id": "i1", "rule": "the governing rule, citing provisions where they exist", "elements": ["each required element, one per entry"]}]}
+
+Use the "issue_id" values from the issues already identified above. Every entry must include a non-empty "elements" array, even when the rule has only one element.
+
+Return the "rules" array and nothing else. State the law in the abstract: do not apply it to the facts of this question, and do not reach a conclusion. Later stages do that."""
+
+
+def stage_application_json_instructions() -> str:
+    """The JSON shape Stage 3 returns: each element tested against the facts."""
+    return """Return only JSON, in exactly this form. Every value is natural-language legal writing, not keywords:
+
+{"findings": [{"issue_id": "i1", "element": "the element", "holds": "yes|no|uncertain", "reasoning": "why, citing the specific facts"}]}
+
+Produce one entry per element listed in the rules above, reusing the element wording verbatim so each finding can be matched back to its rule.
+
+Every "holds" value must be exactly one of the three literal words yes, no, or uncertain. Never write a qualifier or combination such as "partially" or "yes (as to X)": put that nuance in "reasoning" and choose "uncertain" whenever the element does not hold cleanly.
+
+Return the "findings" array and nothing else. Do not state the overall answer to the question: the final stage does that."""
+
 def case_file_json_instructions() -> str:
     return """Return only JSON, in exactly this form. Every value is natural-language \
 legal writing, not keywords:
