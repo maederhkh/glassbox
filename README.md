@@ -3,7 +3,7 @@
 **Does breaking legal reasoning into explicit steps actually make it better?**
 
 Single-pass generation is a black box: when the reasoning fails, you cannot see where.
-A staged pipeline is a glass box every intermediate step is inspectable. This project
+A staged pipeline is a glass box — every intermediate step is inspectable. This project
 is a controlled study of whether that transparency buys any real gain in quality,
 reliability, or error recovery, and what it costs.
 
@@ -73,8 +73,8 @@ has not been run.**
 
 138 tests, none of which call a model.
 
-Everything Phase 1 measured including several findings that contradicted the original
-design is written up in **[`docs/phase1-outcomes.md`](docs/phase1-outcomes.md)**.
+Everything Phase 1 measured — including several findings that contradicted the original
+design — is written up in **[`docs/phase1-outcomes.md`](docs/phase1-outcomes.md)**.
 
 ---
 
@@ -84,12 +84,12 @@ Building the grader before the pipeline was a deliberate choice, and it paid for
 
 - **The official LEXam grader saturates.** It scored the model 0.85 and the *experts' own
   answers* 0.89, with 19 of 20 answers landing on just two values. It cannot separate good
-  from excellent, so the point-level checklist which produced 18 distinct values across
-  20 answers carries the study instead.
+  from excellent, so the point-level checklist — which produced 18 distinct values across
+  20 answers — carries the study instead.
 - **One LEXam question has the wrong answer attached.** `0f6dd9e7` asks about Art. 101
   TFEU; its reference answer analyses Art. 102 and a different fact pattern. Replaced, and
   recorded in the manifest.
-- **Temperature is silently ignored** by `gpt-5-mini` passing it does not error. Stability
+- **Temperature is silently ignored** by `gpt-5-mini` — passing it does not error. Stability
   is therefore measured under the model's default sampling, and the write up must say so.
 - **The blinding was leaking.** The formatting stripper missed the em dash the model
   actually writes, so 15 of 20 Recipe 3 answers were reaching the grader still wearing
@@ -103,7 +103,7 @@ Building the grader before the pipeline was a deliberate choice, and it paid for
 | 2 · Structured | 129,270 | $0.23 |
 | 3 · Think longer | 439,382 | $0.85 |
 
-Recipe 3 spends **3.4×** Recipe 2 on an identical prompt almost entirely in hidden
+Recipe 3 spends **3.4×** Recipe 2 on an identical prompt — almost entirely in hidden
 reasoning rather than longer answers, so answer length does not become a confound.
 
 ---
@@ -112,14 +112,14 @@ reasoning rather than longer answers, so answer length does not become a confoun
 
 | Path | What |
 |---|---|
-| [`src/glassbox/recipes/`](src/glassbox/recipes/) | The recipes and their prompts the experiment itself |
+| [`src/glassbox/recipes/`](src/glassbox/recipes/) | The recipes and their prompts — the experiment itself |
 | [`src/glassbox/grading/`](src/glassbox/grading/) | Blinding, LEXam's judges, checklist scoring |
 | [`src/glassbox/`](src/glassbox/) | Model client, cost metering, dataset, storage, runner |
 | [`scripts/`](scripts/) | The commands you actually run |
 | [`tests/`](tests/) | 138 offline checks |
 | [`docs/`](docs/) | Design spec, implementation plan, Phase 1 outcomes |
 
-Question text, checklists and generated answers stay out of version control LEXam's
+Question text, checklists and generated answers stay out of version control — LEXam's
 content is not redistributed here. Only question IDs and metadata are committed.
 
 ## Running it
@@ -143,11 +143,11 @@ than re-spending.
 
 - **Dataset** — [LEXam](https://lexam-benchmark.github.io/), English open questions, filtered
   to those requiring applied legal reasoning
-- **System model**: `openai/gpt-5-mini`, the same model for every recipe and every stage,
+- **System model** — `openai/gpt-5-mini`, the same model for every recipe and every stage,
   so the manipulation is structure rather than capability
-- **Graders**: LEXam's published three-judge ensemble (`gpt-4o`, `deepseek-chat`,
+- **Graders** — LEXam's published three-judge ensemble (`gpt-4o`, `deepseek-chat`,
   `qwen3-32b`), scored as the minimum
-- **Provider**: all calls via OpenRouter
+- **Provider** — all calls via OpenRouter
 
 ## Related work
 
