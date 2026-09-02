@@ -184,6 +184,7 @@ class PipelineRecipe:
         committed: dict[str, str] = {}
         records: list[StageRecord] = []
         violations: list[dict] = []
+        truncated = False
         amendments: list[dict] = []
         case_file: CaseFile | None = None
 
@@ -202,6 +203,8 @@ class PipelineRecipe:
             # Raises rather than degrading quietly: a stage that produced
             # nothing usable makes every later stage's input wrong, and a
             # half-run saved to disk is worse than none.
+            truncated = truncated or completion.finish_reason == "length"
+
             parsed = parse_case_file(completion.text, question.id)
 
             allowed, out_of_turn = classify_output(stage, parsed)
@@ -244,6 +247,7 @@ class PipelineRecipe:
                 "prompt_hash": self.PROMPT_HASH,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "stages_run": [s.name for s in self.stages],
+                "truncated": truncated,
                 "stage_violations": violations,
                 "amendments": amendments,
             },

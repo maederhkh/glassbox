@@ -41,6 +41,10 @@ class Completion:
     usage: Usage
     model: str
     seconds: float
+    #: "stop" when the model finished, "length" when it hit the output cap.
+    #: A truncated answer scores badly for the wrong reason, so this must
+    #: never be discarded: the cap is only safe while truncation is visible.
+    finish_reason: str | None = None
 
 
 class LLMClient:
@@ -49,6 +53,7 @@ class LLMClient:
         model: str = SYSTEM_MODEL,
         temperature: float | None = SYSTEM_TEMPERATURE,
         reasoning_effort: str | None = None,
+        max_output_tokens: int | None = None,
     ) -> None:
         from openai import OpenAI
 
@@ -56,6 +61,7 @@ class LLMClient:
         self.model = model
         self.temperature = temperature
         self.reasoning_effort = reasoning_effort
+        self.max_output_tokens = max_output_tokens
         self._client = OpenAI(
             base_url=OPENROUTER_BASE_URL,
             api_key=os.environ["OPENROUTER_API_KEY"],
@@ -70,6 +76,8 @@ class LLMClient:
             kwargs["temperature"] = self.temperature
         if self.reasoning_effort is not None:
             kwargs["reasoning_effort"] = self.reasoning_effort
+        if self.max_output_tokens is not None:
+            kwargs["max_completion_tokens"] = self.max_output_tokens
         return self._client.chat.completions.create(**kwargs)
 
     def complete(self, prompt: str, system: str | None = None) -> Completion:
@@ -97,6 +105,7 @@ class LLMClient:
             ),
             model=self.model,
             seconds=seconds,
+            finish_reason=response.choices[0].finish_reason,
         )
 
 
@@ -111,6 +120,8 @@ class FakeLLMClient:
     # test fixtures that the real client never sends.
     temperature: float | None = None
     reasoning_effort: str | None = None
+    max_output_tokens: int | None = None
+    finish_reason: str = "stop"
     prompts: list[str] = field(default_factory=list)
     systems: list[str | None] = field(default_factory=list)
     _index: int = 0
@@ -134,4 +145,5 @@ class FakeLLMClient:
             ),
             model=self.model,
             seconds=0.0,
+            finish_reason=self.finish_reason,
         )

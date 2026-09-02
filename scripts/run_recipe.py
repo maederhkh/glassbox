@@ -5,7 +5,13 @@ from __future__ import annotations
 import argparse
 
 from glassbox.config import (
-    EFFORT_BASELINE, EFFORT_RAISED, RUNS_DIR, SYSTEM_MODEL, SYSTEM_TEMPERATURE,
+    EFFORT_BASELINE,
+    EFFORT_RAISED,
+    MAX_OUTPUT_TOKENS_BASELINE,
+    MAX_OUTPUT_TOKENS_RAISED,
+    RUNS_DIR,
+    SYSTEM_MODEL,
+    SYSTEM_TEMPERATURE,
 )
 from glassbox.dataset import load_manifest, load_sample
 from glassbox.llm import LLMClient
@@ -35,6 +41,27 @@ DEFAULT_EFFORT = {
     "pipeline": EFFORT_BASELINE,
 }
 VALID_EFFORTS = (EFFORT_BASELINE, EFFORT_RAISED)
+
+MAX_OUTPUT_TOKENS = {
+    EFFORT_BASELINE: MAX_OUTPUT_TOKENS_BASELINE,
+    EFFORT_RAISED: MAX_OUTPUT_TOKENS_RAISED,
+}
+
+
+def resolve_max_output_tokens(effort: str) -> int:
+    """The output cap for a given reasoning effort.
+
+    Keyed to effort rather than recipe: output volume tracks how hard the
+    model thinks. See config for the observed maxima these leave headroom
+    over.
+    """
+    if effort not in MAX_OUTPUT_TOKENS:
+        raise SystemExit(
+            f"no output cap recorded for effort {effort!r}; add one to "
+            f"MAX_OUTPUT_TOKENS rather than letting a call request the "
+            f"model's maximum"
+        )
+    return MAX_OUTPUT_TOKENS[effort]
 
 
 def resolve_effort(recipe_name: str, explicit: str | None) -> str:
@@ -90,7 +117,8 @@ def main() -> None:
         if not questions:
             raise SystemExit(f"{a.only!r} not found in sample {a.questions!r}")
     client = LLMClient(model=SYSTEM_MODEL, temperature=SYSTEM_TEMPERATURE,
-                       reasoning_effort=effort)
+                       reasoning_effort=effort,
+                       max_output_tokens=resolve_max_output_tokens(effort))
     run_dir = RUNS_DIR / f"{a.questions}__{a.recipe}{a.tag}"
 
     print(f"{a.recipe} over {len(questions)} questions -> {run_dir}\n")

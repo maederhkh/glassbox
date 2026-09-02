@@ -29,3 +29,33 @@ def test_unrecognised_effort_is_rejected_before_any_client_is_constructed():
     # LLMClient(...), so a typo here never reaches the API.
     with pytest.raises(SystemExit):
         resolve_effort("plain", "medium")
+
+
+def test_baseline_effort_gets_the_smaller_output_cap():
+    # Derived from the effort rather than the recipe name: output volume tracks
+    # how hard the model thinks, and this stays correct if another recipe ever
+    # uses raised effort. Observed maxima on 60 real answers were 9,775 output
+    # plus reasoning tokens at baseline and 30,792 at raised effort.
+    from glassbox.config import EFFORT_BASELINE, MAX_OUTPUT_TOKENS_BASELINE
+    from scripts.run_recipe import resolve_max_output_tokens
+    assert resolve_max_output_tokens(EFFORT_BASELINE) == MAX_OUTPUT_TOKENS_BASELINE
+
+
+def test_raised_effort_gets_the_larger_output_cap():
+    from glassbox.config import EFFORT_RAISED, MAX_OUTPUT_TOKENS_RAISED
+    from scripts.run_recipe import resolve_max_output_tokens
+    assert resolve_max_output_tokens(EFFORT_RAISED) == MAX_OUTPUT_TOKENS_RAISED
+
+
+def test_both_caps_clear_the_output_actually_observed():
+    # Truncation wastes a paid call and corrupts the answer, so the caps keep
+    # real headroom over what the model has actually produced.
+    from glassbox.config import MAX_OUTPUT_TOKENS_BASELINE, MAX_OUTPUT_TOKENS_RAISED
+    assert MAX_OUTPUT_TOKENS_BASELINE > 9_775
+    assert MAX_OUTPUT_TOKENS_RAISED > 30_792
+
+
+def test_an_unrecognised_effort_has_no_cap_of_its_own():
+    from scripts.run_recipe import resolve_max_output_tokens
+    with pytest.raises(SystemExit):
+        resolve_max_output_tokens("medium")

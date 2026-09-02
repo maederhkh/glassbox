@@ -343,3 +343,16 @@ def test_a_pipeline_answer_is_graded_on_its_final_answer_only():
     assert "void under Article 101(2) TFEU" in blinded
     assert "an agreement between undertakings" not in blinded
     assert "pipeline" not in blinded.lower()
+
+
+def test_a_pipeline_run_is_flagged_when_any_stage_truncates():
+    # One truncated stage corrupts every stage after it, since they read its
+    # output through the relay.
+    client = FakeLLMClient(FOUR_STAGE_RESPONSES, finish_reason="length")
+    result = PipelineRecipe().run(QUESTION, client)
+    assert result.metadata["truncated"] is True
+
+
+def test_a_clean_pipeline_run_is_not_flagged():
+    result = PipelineRecipe().run(QUESTION, FakeLLMClient(FOUR_STAGE_RESPONSES))
+    assert result.metadata["truncated"] is False

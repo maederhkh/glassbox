@@ -27,6 +27,21 @@ SYSTEM_TEMPERATURE = None
 EFFORT_BASELINE = "low"
 EFFORT_RAISED = "high"
 
+# Output caps, derived from the 60 real answers in output/runs rather than
+# guessed. Observed single-call maxima, counting reasoning tokens (which are
+# billed and capped as output): 4,633 for plain, 9,775 for structured, 30,792
+# for think_longer. These give roughly 1.6x headroom over the relevant maximum.
+#
+# The cap is keyed to reasoning effort, not to the recipe: output volume tracks
+# how hard the model thinks, and this stays correct if another recipe later uses
+# raised effort.
+#
+# Without a cap the client requests the model's maximum (65,536), so OpenRouter
+# reserves against that on every call. That makes a small balance unusable and
+# leaves per-call cost unbounded in a study that will make thousands of calls.
+MAX_OUTPUT_TOKENS_BASELINE = 16_000
+MAX_OUTPUT_TOKENS_RAISED = 48_000
+
 # LEXam's September 2025 protocol: the minimum of three judges. Task 1 confirmed
 # all three slugs resolve.
 JUDGE_MODELS = ("openai/gpt-4o", "deepseek/deepseek-chat", "qwen/qwen3-32b")

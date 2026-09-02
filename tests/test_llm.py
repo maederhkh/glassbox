@@ -105,3 +105,72 @@ def test_fake_client_raises_when_exhausted():
     client.complete("a")
     with pytest.raises(AssertionError, match="exhausted"):
         client.complete("b")
+
+
+# --- Output cap and truncation detection ----------------------------------
+
+def test_completion_carries_the_finish_reason():
+    # A cap is only safe if truncation is visible. A cut-off answer scores
+    # badly for the wrong reason, so it must never be silently graded.
+    client = FakeLLMClient(["an answer"])
+    assert client.complete("q").finish_reason == "stop"
+
+
+def test_a_fake_can_report_truncation():
+    client = FakeLLMClient(["cut off mid-sen"], finish_reason="length")
+    assert client.complete("q").finish_reason == "length"
+
+
+def test_the_client_records_the_cap_it_was_built_with():
+    from glassbox.config import MAX_OUTPUT_TOKENS_BASELINE
+    client = FakeLLMClient(["a"], max_output_tokens=MAX_OUTPUT_TOKENS_BASELINE)
+    assert client.max_output_tokens == MAX_OUTPUT_TOKENS_BASELINE
+
+
+def test_the_output_cap_is_actually_sent_to_the_api(monkeypatch):
+    """Without this, the cap could stop being sent and nothing would notice.
+
+    Disabling the kwarg passed every other client test, which is the same
+    unobservable-code gap that has bitten this project before: a safeguard
+    nobody has seen work is a safeguard nobody knows works.
+    """
+    from glassbox.llm import LLMClient
+
+    sent = {}
+
+    class _Recorder:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs):
+                    sent.update(kwargs)
+                    raise RuntimeError("stop here -- the kwargs are what we came for")
+
+    client = LLMClient(max_output_tokens=16_000)
+    monkeypatch.setattr(client, "_client", _Recorder)
+    with pytest.raises(RuntimeError):
+        client.complete("a question")
+
+    assert sent["max_completion_tokens"] == 16_000
+
+
+def test_no_cap_means_the_kwarg_is_omitted_entirely(monkeypatch):
+    # Rather than sent as None, which the API would reject.
+    from glassbox.llm import LLMClient
+
+    sent = {}
+
+    class _Recorder:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs):
+                    sent.update(kwargs)
+                    raise RuntimeError("stop here")
+
+    client = LLMClient(max_output_tokens=None)
+    monkeypatch.setattr(client, "_client", _Recorder)
+    with pytest.raises(RuntimeError):
+        client.complete("a question")
+
+    assert "max_completion_tokens" not in sent

@@ -70,6 +70,10 @@ def run_recipe(recipe, questions: list[Question], client, run_dir: Path,
                     result, metadata={**result.metadata, **extra_metadata}
                 )
             save_result(result, run_dir)
+            if result.metadata.get("truncated"):
+                print(f"[warning] {question.id} hit the output cap and is "
+                      f"truncated. It will score badly for the wrong reason; "
+                      f"re-run it with a higher cap before grading.")
             if verbose:
                 print(f"[{i}/{len(questions)}] {question.id[:8]} "
                       f"{result.usage.total_tokens:>7} tok  {result.seconds:>5.1f}s")

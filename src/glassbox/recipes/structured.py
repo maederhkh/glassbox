@@ -89,6 +89,7 @@ class StructuredRecipe:
             "model": completion.model,
             "temperature": getattr(client, "temperature", None),
             "reasoning_effort": getattr(client, "reasoning_effort", None),
+            "truncated": completion.finish_reason == "length",
             "prompt_hash": PROMPT_HASH,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "parse_failed": False,

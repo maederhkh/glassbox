@@ -57,3 +57,19 @@ def test_metadata_carries_a_prompt_hash_and_timestamp():
     b = PlainRecipe().run(QUESTION, FakeLLMClient(["a different answer"]))
     assert a.metadata["prompt_hash"] == b.metadata["prompt_hash"]
     assert isinstance(a.metadata["timestamp"], str) and a.metadata["timestamp"]
+
+
+def test_a_truncated_answer_is_flagged_in_the_metadata():
+    # Hitting the output cap leaves a cut-off answer that would score badly
+    # for the wrong reason. It must be visible in the result, not inferred.
+    from glassbox.recipes.plain import PlainRecipe
+    result = PlainRecipe().run(
+        QUESTION, FakeLLMClient(["cut off mid-sen"], finish_reason="length")
+    )
+    assert result.metadata["truncated"] is True
+
+
+def test_a_complete_answer_is_not_flagged():
+    from glassbox.recipes.plain import PlainRecipe
+    result = PlainRecipe().run(QUESTION, FakeLLMClient(["a complete answer"]))
+    assert result.metadata["truncated"] is False
