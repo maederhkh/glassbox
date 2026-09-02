@@ -80,6 +80,21 @@ class CaseFile(BaseModel):
         return sections
 
 
+def stage_issues_json_instructions() -> str:
+    """The JSON shape Stage 1 of the pipeline returns: issues only.
+
+    Deliberately separate from case_file_json_instructions() rather than a
+    scoped view of it. That function's exact bytes are pinned by the prompt
+    hash recorded in 40 stored answers, so it is not refactored casually.
+    Whether the four stage instructions should later share one generated
+    source is a decision for when stages 2-4 land.
+    """
+    return """Return only JSON, in exactly this form. Every value is natural-language legal writing, not keywords:
+
+{"issues": [{"id": "i1", "statement": "the legal issue", "why_it_arises": "one sentence"}]}
+
+Return the "issues" array and nothing else. Do not name any rule, do not apply anything to the facts, and do not reach a conclusion: later stages do that. Identifying an issue is not the same as answering it."""
+
 def case_file_json_instructions() -> str:
     return """Return only JSON, in exactly this form. Every value is natural-language \
 legal writing, not keywords:
