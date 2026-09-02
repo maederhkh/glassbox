@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from glassbox.dataset import Question
 from glassbox.recipes.base import RecipeResult, prompt_fingerprint
+from glassbox.recipes.steps import numbered_steps
 from glassbox.schema import case_file_json_instructions, parse_case_file
 
 STRUCTURED_SYSTEM = (
@@ -25,26 +26,31 @@ STRUCTURED_SYSTEM = (
     "question. You address legal issues in a structured, exam-style manner."
 )
 
-STRUCTURED_PROMPT = """Answer the following law examination question by working through \
-it in four steps.
+# The numbered list comes from glassbox.recipes.steps, the single home of the
+# four instructions. The Phase 2 pipeline hands the same four out one per stage,
+# and Recipe 2 is only a valid control for it if both ask for exactly the same
+# things, so neither file owns the wording. Everything around the list is Recipe
+# 2's own framing: the pipeline states the task differently because it asks one
+# step at a time.
+#
+# The {json_instructions} and {question} placeholders survive here to be filled
+# by .format() in run(); numbered_steps() is concatenated rather than formatted
+# in, so it cannot disturb them.
+STRUCTURED_PROMPT = (
+    """Answer the following law examination question by working through it in four steps.
 
-1. Identify each legal issue the question raises, and say in one sentence why it arises.
-2. For each issue, state the governing rule, citing specific provisions where they \
-exist, and break that rule into its required elements.
-3. Apply each element to the facts given, saying whether it holds and citing the \
-specific facts that decide it.
-4. State your conclusion, then write out the full exam-style answer.
+"""
+    + numbered_steps()
+    + """
 
-Use precise legal language. Do not state disclaimers, do not suggest consulting a \
-lawyer, and do not tell the reader to research the matter themselves. If the question \
-requires material that has not been provided, say so explicitly rather than inventing \
-it. Answer in English.
+Use precise legal language. Do not state disclaimers, do not suggest consulting a lawyer, and do not tell the reader to research the matter themselves. If the question requires material that has not been provided, say so explicitly rather than inventing it. Answer in English.
 
 {json_instructions}
 
 Question:
 {question}
 """
+)
 
 # Computed once at import time over the fixed templates and the fully-rendered
 # shared JSON instructions -- course/question placeholders left unrendered, see
